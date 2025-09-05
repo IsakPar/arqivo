@@ -44,21 +44,21 @@ function IconShield(props: React.SVGProps<SVGSVGElement>) {
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-white">
-      <div className="mx-auto max-w-5xl px-6 pt-28 pb-24 sm:pt-32 sm:pb-28 lg:px-8">
+      <div className="mx-auto max-w-5xl px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           {/* Top-centered brand image */}
           <div className="flex justify-center">
             <Image
               src="/image.png"
               alt="Arqivo"
-              width={240}
-              height={240}
+              width={480}
+              height={480}
               priority
-              className="h-24 w-auto md:h-28"
+              className="h-40 w-auto md:h-48"
             />
           </div>
 
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-gray-900 sm:text-6xl">
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-gray-900 sm:text-6xl">
             Privacy, without compromise.
           </h1>
           <p className="mt-6 text-lg leading-7 text-gray-600">
