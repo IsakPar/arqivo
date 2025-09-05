@@ -20,7 +20,7 @@ export function Pricing() {
       features: [
         'End‑to‑end encrypted',
         'Zero‑knowledge by design',
-        '1 device',
+        'Cloud access from any device',
       ],
       cta: { label: 'Get started', href: '/sign-up' },
     },
@@ -31,7 +31,7 @@ export function Pricing() {
       features: [
         'All Free features',
         'Unlimited documents',
-        '3 devices',
+        'Cloud sync everywhere',
       ],
       cta: { label: 'Choose Standard', href: '/sign-up' },
       highlight: true,
@@ -42,8 +42,8 @@ export function Pricing() {
       subtitle: '2 TB encrypted storage',
       features: [
         'All Standard features',
+        'Secure sharing with other users',
         'Priority support',
-        '10 devices',
       ],
       cta: { label: 'Choose Pro', href: '/sign-up' },
     },
