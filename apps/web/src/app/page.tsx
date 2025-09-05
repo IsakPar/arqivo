@@ -12,8 +12,8 @@ export default function Home() {
       <PrivacyEngine />
       <Usage />
       <Pricing />
-      <TalentForm />
       <CTA />
+      <TalentForm />
     </main>
   );
 }
