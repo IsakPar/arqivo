@@ -16,12 +16,12 @@ export async function indexRoutes(app: FastifyInstance) {
     const parsed = schema.safeParse({ region, shardId: req.params.shardId });
     if (!parsed.success) return reply.code(400).send({ ok: false });
     const body = await req.body as Buffer;
-    if (body.byteLength > 5 * 1024 * 1024) {
+    if (body.byteLength > 5_000_000) {
       return sendError(reply, 413, 'index_shard_too_large', req.id as string);
     }
     const contentType = (req.headers['content-type'] || 'application/octet-stream').toString();
     const allow = ['application/octet-stream', 'application/cbor'];
-    if (!allow.includes(contentType)) return reply.code(415).send({ ok: false, code: 'invalid_input' });
+    if (!allow.includes(contentType)) return sendError(reply, 415, 'invalid_input', req.id as string);
     const accountId = req.accountId || 'anonymous';
     await storage.putObject({ region, key: `r/${region}/${accountId}/index/${parsed.data.shardId}`, body: new Uint8Array(body), contentType: 'application/octet-stream' });
     return { ok: true };

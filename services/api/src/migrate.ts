@@ -24,6 +24,7 @@ async function main() {
       account_id uuid not null references accounts(account_id) on delete cascade,
       region_code text not null,
       size_bytes bigint not null,
+      doc_hash text,
       created_at timestamptz not null default now()
     );
     create table if not exists audit_logs (

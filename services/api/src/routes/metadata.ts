@@ -16,12 +16,12 @@ export async function metadataRoutes(app: FastifyInstance) {
     const parsed = schema.safeParse({ region, docId: req.params.docId });
     if (!parsed.success) return reply.code(400).send({ ok: false });
     const body = await req.body as Buffer;
-    if (body.byteLength > 1024 * 1024) {
+    if (body.byteLength > 1_000_000) {
       return sendError(reply, 413, 'metadata_too_large', req.id as string);
     }
     const contentType = (req.headers['content-type'] || 'application/octet-stream').toString();
     const allow = ['application/octet-stream', 'application/cbor', 'application/json'];
-    if (!allow.includes(contentType)) return reply.code(415).send({ ok: false, code: 'invalid_input' });
+    if (!allow.includes(contentType)) return sendError(reply, 415, 'invalid_input', req.id as string);
     const accountId = req.accountId || 'anonymous';
     await storage.putObject({ region, key: `r/${region}/${accountId}/meta/${parsed.data.docId}`, body: new Uint8Array(body), contentType: 'application/octet-stream' });
     return { ok: true };

@@ -14,6 +14,7 @@ import { authMiddleware } from './middleware/auth.js';
 import { incRequest, renderPrometheus, addUploadBytes } from './metrics.js';
 import { sendError } from './error.js';
 import { query } from './db.js';
+import { randomUUID } from 'node:crypto';
 
 loadEnv();
 
@@ -21,7 +22,8 @@ async function start() {
   const server = Fastify({
     logger: {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-    }
+    },
+    bodyLimit: 100 * 1024 * 1024,
   });
 
   await server.register(helmet);
@@ -49,6 +51,28 @@ async function start() {
   // Request counter hook
   server.addHook('onRequest', async (req, _reply) => {
     incRequest(req.method, req.url);
+  });
+  // Request-id header & simple per-account rate limit (v0, in-memory)
+  type Bucket = { t: number; tokens: number };
+  const buckets = new Map<string, Bucket>();
+  const CAP = Number(process.env.RATE_CAPACITY ?? 100);
+  const REFILL = Number(process.env.RATE_REFILL ?? 50);
+  server.addHook('onRequest', (req, reply, done) => {
+    const rid = (req.headers['x-request-id'] as string) || randomUUID();
+    reply.header('x-request-id', rid);
+    // Rate limit by account
+    const acct = (req as any).accountId || 'anon';
+    const now = Date.now() / 1000;
+    const b = buckets.get(acct) ?? { t: now, tokens: CAP };
+    b.tokens = Math.min(CAP, b.tokens + (now - b.t) * REFILL);
+    b.t = now;
+    if (b.tokens < 1) {
+      reply.header('Retry-After', '1').code(429).send({ ok: false, code: 'rate_limited', request_id: rid });
+      return;
+    }
+    b.tokens -= 1;
+    buckets.set(acct, b);
+    done();
   });
   // Audit log on response
   server.addHook('onResponse', async (req, reply) => {

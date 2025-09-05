@@ -1,4 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand } from '@aws-sdk/client-s3';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { env } from './env.js';
 
 type RegionCode = 'us' | 'eu';
@@ -9,29 +11,44 @@ function bucketForRegion(region: RegionCode): string {
 
 export class StorageService {
   private client: S3Client;
+  private useLocal: boolean;
+  private baseDir: string;
 
   constructor() {
+    this.useLocal = process.env.NODE_ENV === 'test' || process.env.STORAGE_MODE === 'local';
+    this.baseDir = process.env.DATA_DIR || path.join(process.cwd(), '.data', 'storage');
     this.client = new S3Client({ region: env.AWS_REGION });
   }
 
   async putObject(params: { region: RegionCode; key: string; body: Uint8Array; contentType?: string }) {
+    if (this.useLocal) {
+      const file = path.join(this.baseDir, params.key);
+      await fs.mkdir(path.dirname(file), { recursive: true });
+      await fs.writeFile(file, Buffer.from(params.body));
+      return;
+    }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    await this.client.send(new PutObjectCommand({
-      Bucket,
-      Key,
-      Body: Buffer.from(params.body),
-      ContentType: params.contentType ?? 'application/octet-stream',
-    }));
+    await this.client.send(new PutObjectCommand({ Bucket, Key, Body: Buffer.from(params.body), ContentType: params.contentType ?? 'application/octet-stream' }));
   }
 
   async headObject(params: { region: RegionCode; key: string }) {
+    if (this.useLocal) {
+      const file = path.join(this.baseDir, params.key);
+      const st = await fs.stat(file);
+      return { ContentLength: st.size } as any;
+    }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
     return this.client.send(new HeadObjectCommand({ Bucket, Key }));
   }
 
   async getObject(params: { region: RegionCode; key: string }): Promise<Uint8Array> {
+    if (this.useLocal) {
+      const file = path.join(this.baseDir, params.key);
+      const data = await fs.readFile(file);
+      return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
     const res = await this.client.send(new GetObjectCommand({ Bucket, Key }));
@@ -40,6 +57,10 @@ export class StorageService {
   }
 
   async createMultipartUpload(params: { region: RegionCode; key: string; contentType?: string }) {
+    if (this.useLocal) {
+      // Local stub: create upload folder and return id
+      return 'local-upload-' + Date.now();
+    }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
     const res = await this.client.send(new CreateMultipartUploadCommand({ Bucket, Key, ContentType: params.contentType ?? 'application/octet-stream' }));
@@ -47,6 +68,10 @@ export class StorageService {
   }
 
   async uploadPart(params: { region: RegionCode; key: string; uploadId: string; partNumber: number; body: Uint8Array }) {
+    if (this.useLocal) {
+      // Local stub: ignore parts
+      return 'etag-local';
+    }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
     const res = await this.client.send(new UploadPartCommand({ Bucket, Key, UploadId: params.uploadId, PartNumber: params.partNumber, Body: Buffer.from(params.body) }));
@@ -54,6 +79,7 @@ export class StorageService {
   }
 
   async completeMultipart(params: { region: RegionCode; key: string; uploadId: string; parts: { ETag: string; PartNumber: number }[] }) {
+    if (this.useLocal) return;
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
     await this.client.send(new CompleteMultipartUploadCommand({ Bucket, Key, UploadId: params.uploadId, MultipartUpload: { Parts: params.parts } }));
