@@ -11,7 +11,8 @@ export async function authMiddleware(app: FastifyInstance) {
 
     let clerkUserId: string | undefined;
     const authHeader = req.headers.authorization;
-    if (!env.DEV_AUTH_BYPASS && env.CLERK_SECRET_KEY && authHeader?.startsWith('Bearer ')) {
+    const strict = env.STRICT_AUTH === 'true';
+    if ((strict || !env.DEV_AUTH_BYPASS) && env.CLERK_SECRET_KEY && authHeader?.startsWith('Bearer ')) {
       try {
         const token = authHeader.slice('Bearer '.length);
         const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
