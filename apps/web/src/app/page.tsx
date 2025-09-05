@@ -1,8 +1,7 @@
 import { Hero } from "../components/Hero";
 import { PrivacyEngine } from "../components/PrivacyEngine";
 import { Usage } from "../components/Usage";
-import { UploadSteps } from "../components/UploadSteps";
-import { Steps } from "../components/Steps";
+import { Pricing } from "../components/Pricing";
 
 export default function Home() {
   return (
@@ -10,8 +9,7 @@ export default function Home() {
       <Hero />
       <PrivacyEngine />
       <Usage />
-      <UploadSteps />
-      <Steps />
+      <Pricing />
     </main>
   );
 }
