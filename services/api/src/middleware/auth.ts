@@ -3,6 +3,7 @@ import { verifyToken } from '@clerk/backend';
 import { env } from '../env.js';
 import { query } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import { sendError } from '../error.js';
 
 export async function authMiddleware(app: FastifyInstance) {
   app.addHook('preHandler', async (req: FastifyRequest, reply: FastifyReply) => {
@@ -12,17 +13,30 @@ export async function authMiddleware(app: FastifyInstance) {
     let clerkUserId: string | undefined;
     const authHeader = req.headers.authorization;
     const strict = env.STRICT_AUTH === 'true';
-    if ((strict || !env.DEV_AUTH_BYPASS) && env.CLERK_SECRET_KEY && authHeader?.startsWith('Bearer ')) {
+    if (strict) {
+      if (!env.CLERK_SECRET_KEY || !authHeader?.startsWith('Bearer ')) {
+        return sendError(reply, 401, 'unauthorized', req.id as string);
+      }
       try {
         const token = authHeader.slice('Bearer '.length);
         const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
         clerkUserId = (payload as any).sub as string;
       } catch {
-        return reply.code(401).send({ ok: false });
+        return sendError(reply, 401, 'unauthorized', req.id as string);
       }
     } else {
-      // Dev fallback: single demo user
-      clerkUserId = 'dev_user';
+      // Dev mode: validate if header present, else fallback to a demo user
+      if (authHeader?.startsWith('Bearer ') && env.CLERK_SECRET_KEY) {
+        try {
+          const token = authHeader.slice('Bearer '.length);
+          const payload = await verifyToken(token, { secretKey: env.CLERK_SECRET_KEY });
+          clerkUserId = (payload as any).sub as string;
+        } catch {
+          clerkUserId = 'dev_user';
+        }
+      } else {
+        clerkUserId = 'dev_user';
+      }
     }
 
     // Map to account

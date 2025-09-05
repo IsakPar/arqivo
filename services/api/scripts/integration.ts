@@ -15,6 +15,16 @@ async function main() {
   if (!health.includes('"ok":true')) throw new Error('health failed');
   const metrics = await get('/metrics');
   if (!metrics.includes('arqivo_requests_total')) throw new Error('metrics failed');
+  // Strict auth rejection check (unauthenticated)
+  process.env.STRICT_AUTH = 'true';
+  await new Promise<void>((resolve, reject) => {
+    const req = http.request({ host: 'localhost', port: 3001, path: '/v1/blobs/test-id', method: 'PUT' }, (res) => {
+      if (res.statusCode !== 401) reject(new Error('expected 401 for unauthenticated PUT'));
+      else resolve();
+    });
+    req.on('error', reject);
+    req.end(Buffer.from('ciphertext'));
+  });
   console.log('integration tests passed');
 }
 

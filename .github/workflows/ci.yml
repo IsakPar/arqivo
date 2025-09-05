@@ -1,0 +1,36 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: pass
+        ports:
+          - 5433:5432
+      s3mock:
+        image: adobe/s3mock:latest
+        ports:
+          - 9090:9090
+    env:
+      DATABASE_URL: postgres://postgres:pass@localhost:5433/postgres
+      STRICT_AUTH: 'true'
+      DEV_AUTH_BYPASS: ''
+      CLERK_SECRET_KEY: sk_test_dummy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm i
+      - run: pnpm --filter @arqivo/api migrate
+      - run: pnpm --filter @arqivo/api build
+      - run: pnpm --filter @arqivo/api test
+
+
