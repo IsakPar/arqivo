@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 function IconLock(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -45,7 +46,19 @@ export function Hero() {
     <section className="relative isolate overflow-hidden bg-white">
       <div className="mx-auto max-w-5xl px-6 pt-28 pb-24 sm:pt-32 sm:pb-28 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-semibold tracking-tight text-gray-900 sm:text-6xl">
+          {/* Top-centered brand image */}
+          <div className="flex justify-center">
+            <Image
+              src="/image.png"
+              alt="Arqivo"
+              width={240}
+              height={240}
+              priority
+              className="h-24 w-auto md:h-28"
+            />
+          </div>
+
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-gray-900 sm:text-6xl">
             Privacy, without compromise.
           </h1>
           <p className="mt-6 text-lg leading-7 text-gray-600">
