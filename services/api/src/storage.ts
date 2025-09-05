@@ -17,7 +17,13 @@ export class StorageService {
   constructor() {
     this.useLocal = process.env.NODE_ENV === 'test' || process.env.STORAGE_MODE === 'local';
     this.baseDir = process.env.DATA_DIR || path.join(process.cwd(), '.data', 'storage');
-    this.client = new S3Client({ region: env.AWS_REGION });
+    const endpoint = process.env.AWS_S3_ENDPOINT;
+    const forcePathStyle = (process.env.AWS_S3_FORCE_PATH_STYLE || '').toLowerCase() === 'true';
+    this.client = new S3Client({
+      region: env.AWS_REGION,
+      endpoint: endpoint || undefined,
+      forcePathStyle,
+    });
   }
 
   async putObject(params: { region: RegionCode; key: string; body: Uint8Array; contentType?: string }) {
