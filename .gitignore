@@ -1,0 +1,20 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# builds
+.next
+out
+dist
+coverage
+
+# env
+.env
+.env.*
+
+# misc
+.DS_Store
+pnpm-debug.log*
+.idea
+.vscode
