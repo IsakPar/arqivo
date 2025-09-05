@@ -15,11 +15,11 @@ export async function deviceRoutes(app: FastifyInstance) {
     }
     const accountId = req.accountId;
     if (!accountId) return reply.code(401).send({ ok: false });
+    // Idempotent by public key
+    const existing = await query<{ device_id: string }>('select device_id from devices where public_key=$1', [parsed.data.publicKey]);
+    if (existing.rows[0]) return { ok: true, deviceId: existing.rows[0].device_id };
     const deviceId = randomUUID();
-    await query(
-      'insert into devices(device_id, account_id, public_key) values ($1,$2,$3)',
-      [deviceId, accountId, parsed.data.publicKey]
-    );
+    await query('insert into devices(device_id, account_id, public_key) values ($1,$2,$3)', [deviceId, accountId, parsed.data.publicKey]);
     return { ok: true, deviceId };
   });
 }

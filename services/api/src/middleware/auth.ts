@@ -15,7 +15,7 @@ export async function authMiddleware(app: FastifyInstance) {
     const strict = env.STRICT_AUTH === 'true';
     if (strict) {
       if (!env.CLERK_SECRET_KEY || !authHeader?.startsWith('Bearer ')) {
-        return sendError(reply, 401, 'unauthorized', req.id as string);
+        return sendError(reply, 401, 'auth_required', req.id as string);
       }
       try {
         const token = authHeader.slice('Bearer '.length);

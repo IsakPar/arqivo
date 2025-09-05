@@ -10,7 +10,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "migrate": "tsx src/migrate.ts",
-    "test": "tsx scripts/integration.ts",
+    "test": "vitest run",
+    "test:strict": "STRICT_AUTH=true DEV_AUTH_BYPASS= CLERK_SECRET_KEY=sk_test_dummy vitest run tests/strict-auth",
+    "test:all": "pnpm -C services/api test && pnpm -C services/api test:strict",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"(no lint yet)\""
   },
@@ -28,6 +30,12 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.0.0",
+    "vitest": "^1.6.0",
+    "@vitest/runner": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "get-port": "^7.1.0",
     "@types/pg": "^8.10.6",
     "tsx": "^4.15.6",
     "typescript": "^5.5.4"

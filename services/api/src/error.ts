@@ -3,6 +3,7 @@ import type { FastifyReply } from 'fastify';
 export type ErrorCode =
   | 'invalid_input'
   | 'unauthorized'
+  | 'auth_required'
   | 'id_mismatch'
   | 'bad_hash'
   | 'payload_too_large'

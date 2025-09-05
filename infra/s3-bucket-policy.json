@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": ["arn:aws:s3:::arqivo-us","arn:aws:s3:::arqivo-us/*"],
+      "Condition": { "Bool": { "aws:SecureTransport": "false" } }
+    },
+    {
+      "Sid": "RestrictToAccount",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": ["arn:aws:s3:::arqivo-us","arn:aws:s3:::arqivo-us/*"],
+      "Condition": { "StringNotEquals": { "aws:PrincipalAccount": "${AWS_ACCOUNT_ID}" } }
+    }
+  ]
+}
+
+

@@ -18,6 +18,7 @@ async function main() {
       public_key text not null,
       created_at timestamptz not null default now()
     );
+    create unique index if not exists devices_unique_pubkey on devices(public_key);
     create table if not exists documents (
       doc_id text primary key,
       account_id uuid not null references accounts(account_id) on delete cascade,
