@@ -47,6 +47,14 @@ export async function aesGcmEncrypt(keyBytes: Uint8Array, plaintext: Uint8Array,
   return { iv, ciphertext: ct, packed: concatBytes(iv, ct) };
 }
 
+export async function sha256Hex(input: Uint8Array): Promise<string> {
+  const ab: ArrayBuffer = (input.byteOffset === 0 && input.byteLength === input.buffer.byteLength)
+    ? input.buffer
+    : input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+  const hash = await crypto.subtle.digest('SHA-256', ab);
+  return toHex(new Uint8Array(hash));
+}
+
 // Simple local vault key for v0 (replace with device-bound K_v later)
 const KV_STORAGE_KEY = 'arqivo_kv_hex';
 

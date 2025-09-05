@@ -13,7 +13,7 @@ async function putBinary(path: string, bytes: Uint8Array): Promise<void> {
   const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'PUT',
-    headers: { 'content-type': 'application/octet-stream', 'x-cipher-hash': hex },
+    headers: { 'content-type': 'application/octet-stream', 'x-cipher-hash': `sha256:${hex}` },
     body: bytes,
   });
   if (!res.ok) {
