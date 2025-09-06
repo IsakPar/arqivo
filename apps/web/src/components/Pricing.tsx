@@ -13,20 +13,7 @@ type Plan = {
   highlight?: boolean;
 };
 
-export function Pricing() {
-  const { getToken } = useAuth();
-  const startCheckout = useCallback(async (plan: 'standard'|'pro') => {
-    try {
-      const token = await getToken?.();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/billing/checkout`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (data?.url) window.location.href = data.url;
-    } catch {}
-  }, [getToken]);
+function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro') => void }) {
   const plans: Plan[] = [
     {
       name: 'Free',
@@ -101,7 +88,7 @@ export function Pricing() {
                   <li key={f} className="flex items-start gap-2"><span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-gray-400" /> {f}</li>
                 ))}
               </ul>
-              {p.name === 'Standard' || p.name === 'Pro' ? (
+              {startCheckout && (p.name === 'Standard' || p.name === 'Pro') ? (
                 <button onClick={() => startCheckout(p.name.toLowerCase() as 'standard'|'pro')} className={`mt-6 inline-flex w-full items-center justify-center rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors ${p.highlight ? 'bg-gray-900 text-white hover:bg-black' : 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50'}`}>
                   {p.cta.label}
                 </button>
@@ -116,6 +103,51 @@ export function Pricing() {
       </div>
     </section>
   );
+}
+
+function PricingWithClerk() {
+  const { getToken } = useAuth();
+  const startCheckout = useCallback(async (plan: 'standard'|'pro') => {
+    try {
+      const token = await getToken?.();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/billing/checkout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ plan }),
+      });
+      let url: string | undefined;
+      try {
+        const data = await res.json();
+        url = data?.url;
+      } catch {}
+      if (url) window.location.href = url;
+    } catch {}
+  }, [getToken]);
+  return <BasePricing startCheckout={startCheckout} />;
+}
+
+function PricingAnon() {
+  const startCheckout = useCallback(async (plan: 'standard'|'pro') => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/billing/checkout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      let url: string | undefined;
+      try {
+        const data = await res.json();
+        url = data?.url;
+      } catch {}
+      if (url) window.location.href = url;
+    } catch {}
+  }, []);
+  return <BasePricing startCheckout={startCheckout} />;
+}
+
+export function Pricing() {
+  const enabled = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== 'pk_test_clerk_placeholder';
+  return enabled ? <PricingWithClerk /> : <PricingAnon />;
 }
 
 
