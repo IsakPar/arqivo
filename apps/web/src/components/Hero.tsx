@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { PrimaryButton } from './ui/PrimaryButton';
+import { SecondaryTextLink } from './ui/SecondaryTextLink';
 import Image from 'next/image';
 
 function IconLock(props: React.SVGProps<SVGSVGElement>) {
@@ -81,20 +83,8 @@ export function Hero() {
             End-to-end encrypted. Zero-knowledge by design.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Link href="/sign-up" className="group inline-flex items-center rounded-full bg-gradient-to-b from-gray-900 to-black px-6 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(0,0,0,0.15)] transition-all hover:shadow-[0_10px_22px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
-              Get Started
-              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="ml-2 h-4 w-4 opacity-80 transition-transform duration-200 group-hover:translate-x-0.5">
-                <path d="M5 12h14" />
-                <path d="M13 6l6 6-6 6" />
-              </svg>
-            </Link>
-            <Link href="#how-it-works" className="group inline-flex items-center text-sm font-medium text-gray-900 hover:underline underline-offset-4">
-              See how it works
-              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="ml-1.5 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5">
-                <path d="M5 12h14" />
-                <path d="M13 6l6 6-6 6" />
-              </svg>
-            </Link>
+            <PrimaryButton href="/sign-up">Get Started</PrimaryButton>
+            <SecondaryTextLink href="#how-it-works">See how it works</SecondaryTextLink>
           </div>
         </div>
       </div>
