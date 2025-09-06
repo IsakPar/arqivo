@@ -44,6 +44,11 @@ function IconShield(props: React.SVGProps<SVGSVGElement>) {
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-white">
+      {/* subtle animated background */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(700px_240px_at_50%_0%,#eef2ff_25%,transparent_60%)]" />
+        <div className="absolute left-1/2 top-8 h-36 w-[120%] -translate-x-1/2 bg-gradient-to-r from-transparent via-gray-200/50 to-transparent [mask-image:linear-gradient(90deg,transparent,black,transparent)] animate-hero-beam" />
+      </div>
       <div className="mx-auto max-w-5xl px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           {/* Top-centered brand image */}
@@ -78,27 +83,11 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Floating line icons */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <IconLock className="absolute left-[8%] top-[20%] h-10 w-10 text-gray-300 opacity-60 icon-float-slow" />
-        <IconKey className="absolute right-[12%] top-[30%] h-10 w-10 text-gray-300 opacity-60 icon-float-slower" />
-        <IconFingerprint className="absolute left-[18%] bottom-[18%] h-10 w-10 text-gray-300 opacity-60 icon-float-slower" />
-        <IconShield className="absolute right-[16%] bottom-[22%] h-10 w-10 text-gray-300 opacity-60 icon-float-slow" />
-      </div>
+      {/* remove floating icons to keep minimal */}
 
       <style jsx global>{`
-        @keyframes floatSlow {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-6px); }
-          100% { transform: translateY(0px); }
-        }
-        @keyframes floatSlower {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-        .icon-float-slow { animation: floatSlow 10s ease-in-out infinite; }
-        .icon-float-slower { animation: floatSlower 14s ease-in-out infinite; }
+        .animate-hero-beam { animation: heroBeam 8s linear infinite; }
+        @keyframes heroBeam { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
       `}</style>
     </section>
   );
