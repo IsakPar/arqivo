@@ -26,7 +26,7 @@ export function Usage() {
       setQuery(target.slice(0, i));
       if (i >= target.length) {
         typing.current && clearInterval(typing.current);
-        setTimeout(() => setIdx((v) => (v + 1) % SUGGESTIONS.length), 1400);
+        setTimeout(() => setIdx((v) => (v + 1) % SUGGESTIONS.length), 2800);
       }
     }, 35);
     return () => { typing.current && clearInterval(typing.current); };
@@ -39,13 +39,15 @@ export function Usage() {
     { title: 'Passport — Renewal Pack', date: '2027-01-15', tags: ['passport','id'] },
   ];
   const lower = query.toLowerCase();
-  const augmentedResults = results.map((r) => ({
-    ...r,
-    isMatch:
-      lower.length === 0 ||
-      r.title.toLowerCase().includes(lower) ||
-      r.tags.some((t) => t.toLowerCase().includes(lower)),
-  }));
+  const tokens = lower.split(/[^a-z0-9]+/i).filter(Boolean).filter((t) => t.length > 1);
+  const augmentedResults = results.map((r) => {
+    const title = r.title.toLowerCase();
+    const tagStrs = r.tags.map((t) => t.toLowerCase());
+    const isMatch = tokens.length === 0
+      ? true
+      : tokens.some((t) => title.includes(t) || tagStrs.some((tg) => tg.includes(t)));
+    return { ...r, isMatch } as typeof r & { isMatch: boolean };
+  });
 
   return (
     <section id="usage" className="relative overflow-hidden bg-white">
