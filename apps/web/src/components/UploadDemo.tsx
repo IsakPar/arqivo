@@ -135,7 +135,7 @@ export function UploadDemo() {
                 <div className="mt-3 grid grid-cols-3 gap-3 text-xs text-gray-700">
                   <div className="col-span-3 sm:col-span-1">
                     <div className="text-[11px] uppercase tracking-wide text-gray-500">Summary</div>
-                    <div className="mt-1 text-sm text-gray-900">Receipt — MacBook Air 13"</div>
+                    <div className="mt-1 text-sm text-gray-900">Receipt — MacBook Air 13&quot;</div>
                     <div className="text-gray-600">April 2015 · Apple Store</div>
                   </div>
                   <div className="col-span-3 sm:col-span-1">

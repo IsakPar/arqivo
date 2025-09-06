@@ -43,7 +43,7 @@ export function TalentForm() {
         <div className="rounded-3xl border border-white/40 bg-white/40 p-8 shadow-xl backdrop-blur-xl sm:p-10">
           <div className="mx-auto max-w-2xl text-center">
             <h3 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Advisors & Builders</h3>
-            <p className="mt-2 text-sm text-gray-600">We're meeting exceptional people across security, cryptography, storage infra, and product.</p>
+            <p className="mt-2 text-sm text-gray-600">We&apos;re meeting exceptional people across security, cryptography, storage infra, and product.</p>
           </div>
           <form onSubmit={handleSubmit} className="mx-auto mt-8 max-w-2xl space-y-5">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -109,7 +109,7 @@ export function TalentForm() {
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <p className="text-xs text-gray-500">We'll spin up an email draft. If it doesn't open, reach us at <span className="font-medium text-gray-700">hello@arqivo.app</span>.</p>
+              <p className="text-xs text-gray-500">We&apos;ll spin up an email draft. If it doesn&apos;t open, reach us at <span className="font-medium text-gray-700">hello@arqivo.app</span>.</p>
               <button
                 type="submit"
                 disabled={!isValid}
@@ -120,7 +120,7 @@ export function TalentForm() {
             </div>
 
             {submitted && (
-              <p className="text-right text-xs text-emerald-600">Draft prepared — thank you. We'll be in touch.</p>
+              <p className="text-right text-xs text-emerald-600">Draft prepared — thank you. We&apos;ll be in touch.</p>
             )}
           </form>
         </div>
