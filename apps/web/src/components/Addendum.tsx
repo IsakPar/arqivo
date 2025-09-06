@@ -70,8 +70,8 @@ export function Addendum() {
 
   return (
     <section aria-labelledby="addendum-title" className="bg-white">
-      <div className="mx-auto max-w-3xl px-6 py-20 sm:py-24 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
+      <div className="mx-auto max-w-5xl px-6 py-20 sm:py-24 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
           <h3 id="addendum-title" className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
             From chaos to clarity.
           </h3>
@@ -87,11 +87,11 @@ export function Addendum() {
           onMouseLeave={() => setIsPaused(false)}
           onFocus={() => setIsPaused(true)}
           onBlur={() => setIsPaused(false)}
-          className="mx-auto mt-8 rounded-3xl border border-white/40 bg-white/40 p-6 shadow-xl backdrop-blur-xl sm:p-8"
+          className="mx-auto mt-8 w-full max-w-4xl rounded-3xl border border-white/40 bg-white/40 p-8 shadow-xl backdrop-blur-xl sm:p-10"
         >
           <div className="sr-only" aria-live="polite">{ariaLiveText}</div>
 
-          <div className="relative h-64">
+          <div className="relative h-80">
             {/* Coral crypto pathline */}
             <svg aria-hidden viewBox="0 0 800 200" className="absolute inset-0 h-full w-full">
               <defs>
@@ -128,7 +128,7 @@ export function Addendum() {
             {/* Left: cryptic file */}
             <div
               className={classNames(
-                'absolute left-6 top-1/2 -translate-y-1/2 w-64',
+                'absolute left-8 top-1/2 -translate-y-1/2 w-80',
                 'transition-all duration-700',
                 phase === 'before' && !reduced && 'opacity-100 translate-x-0',
                 phase === 'process' && !reduced && 'opacity-100 translate-x-4',
@@ -162,7 +162,7 @@ export function Addendum() {
             {/* Right: understood file with tags */}
             <div
               className={classNames(
-                'absolute right-6 top-1/2 -translate-y-1/2 w-72',
+                'absolute right-8 top-1/2 -translate-y-1/2 w-96',
                 'transition-all duration-700',
                 phase === 'after' && !reduced && 'opacity-100 translate-x-0',
                 phase !== 'after' && !reduced && 'opacity-0 translate-x-4',
