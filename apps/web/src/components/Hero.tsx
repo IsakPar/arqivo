@@ -48,8 +48,13 @@ export function Hero() {
       }
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(700px_240px_at_50%_0%,#eef2ff_25%,transparent_60%)]" />
-        <div className="absolute left-1/2 top-8 h-36 w-[120%] -translate-x-1/2 bg-gradient-to-r from-transparent via-gray-200/50 to-transparent [mask-image:linear-gradient(90deg,transparent,black,transparent)] animate-hero-beam" />
-        <div className="absolute left-1/2 top-28 h-24 w-[110%] -translate-x-1/2 bg-gradient-to-r from-transparent via-gray-200/30 to-transparent [mask-image:linear-gradient(90deg,transparent,black,transparent)] animate-hero-beam-slow" />
+        {/* crypto ribbon in soft coral */}
+        <div className="absolute left-1/2 top-14 w-[140%] -translate-x-1/2 rotate-[-8deg] [mask-image:linear-gradient(90deg,transparent,black,transparent)]">
+          <p className="crypto-ribbon pointer-events-none select-none whitespace-nowrap font-mono text-[12px] tracking-[0.25em] text-[#e8796e]" style={{ opacity: 0.04 }}>
+            6f1a9c7b2e3d58a1c4f0b7e2a9d3c6f1 8b2e4a7d9c1f3e6a5b8d2c4f1a7e9d3c 2f9a7e1c3b5d8f0a6c4e2b9d1f3a7c5e
+            9d3c7a1e5f0b2d4c6e8a1f3b5d7c9e2a 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d 7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b
+          </p>
+        </div>
       </div>
       <div className="mx-auto max-w-5xl px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
@@ -96,10 +101,10 @@ export function Hero() {
       {/* remove floating icons to keep minimal */}
 
       <style jsx global>{`
-        .animate-hero-beam { animation: heroBeam 9s linear infinite; }
-        .animate-hero-beam-slow { animation: heroBeamSlow 14s linear infinite; }
-        @keyframes heroBeam { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
-        @keyframes heroBeamSlow { from { transform: translateX(10%); } to { transform: translateX(-10%); } }
+        @media (prefers-reduced-motion: no-preference) {
+          .crypto-ribbon { animation: cryptoDrift 16s linear infinite; }
+        }
+        @keyframes cryptoDrift { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
       `}</style>
     </section>
   );
