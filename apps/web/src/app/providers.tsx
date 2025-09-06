@@ -5,11 +5,12 @@ import React from 'react';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  if (!pk) {
+  const enabled = !!pk && pk !== 'pk_test_clerk_placeholder';
+  if (!enabled) {
     // Fallback: run without Clerk when keys are not configured yet
     return <>{children}</>;
   }
-  return <ClerkProvider>{children}</ClerkProvider>;
+  return <ClerkProvider publishableKey={pk}>{children}</ClerkProvider>;
 }
 
 
