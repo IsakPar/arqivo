@@ -38,15 +38,15 @@ export function PrivacyEngine() {
                 <path d="M256 102 L302 94" />
               </g>
               <text x="228" y="76" className="fill-gray-600" fontSize="12">Encrypted Index (HNSW)</text>
-              {/* Crypto pathline (static) */}
-              <path d="M200 90 C210 110, 230 120, 246 100" className="stroke-[#f1998d]" strokeOpacity="0.5" strokeWidth="2" />
+              {/* Crypto pathline (animated) */}
+              <path d="M200 90 C210 110, 230 120, 246 100" className="stroke-[#f1998d] crypto-path" strokeOpacity="0.5" strokeWidth="2" />
               {/* Cloud outside with X */}
               <g transform="translate(420,40)">
                 <path d="M40 36c0-9-7-16-16-16-2 0-3 0-5 1C17 12 9 18 9 28c-5 0-9 4-9 9s4 9 9 9h48c6 0 11-5 11-11s-5-11-11-11Z" className="stroke-gray-300" strokeWidth="1.5" fill="none"/>
                 <path d="M16 52 L56 12 M16 12 L56 52" className="stroke-gray-300" strokeWidth="1.5" />
               </g>
               {/* E2EE badge at boundary */}
-              <rect x="280" y="216" width="84" height="28" rx="6" className="fill-gray-900" />
+              <rect x="280" y="216" width="84" height="28" rx="6" fill="#111111" />
               <text x="292" y="234" className="fill-white" fontSize="12">E2EE inside</text>
             </svg>
           </div>
@@ -70,9 +70,9 @@ export function PrivacyEngine() {
               <text x="44" y="72" className="fill-gray-800" fontSize="13">Vault Root</text>
               <text x="44" y="88" className="fill-gray-600" fontSize="11">X25519 / Argon2id</text>
               {/* One-way arrows to Kdoc */}
-              <path d="M168 68 H260" className="stroke-[#f1998d]" strokeOpacity="0.8" strokeWidth="2" markerEnd="url(#arrow)"/>
-              <path d="M168 68 C220 68, 220 128, 260 128" className="stroke-[#f1998d]" strokeOpacity="0.6" strokeWidth="2" markerEnd="url(#arrow)"/>
-              <path d="M168 68 C220 68, 220 188, 260 188" className="stroke-[#f1998d]" strokeOpacity="0.4" strokeWidth="2" markerEnd="url(#arrow)"/>
+              <path d="M168 68 H260" className="stroke-[#f1998d] crypto-path-fast" strokeOpacity="0.8" strokeWidth="2" markerEnd="url(#arrow)"/>
+              <path d="M168 68 C220 68, 220 128, 260 128" className="stroke-[#f1998d] crypto-path" strokeOpacity="0.6" strokeWidth="2" markerEnd="url(#arrow)"/>
+              <path d="M168 68 C220 68, 220 188, 260 188" className="stroke-[#f1998d] crypto-path-slow" strokeOpacity="0.4" strokeWidth="2" markerEnd="url(#arrow)"/>
               <defs>
                 <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                   <path d="M0 0 L10 5 L0 10 z" fill="#f1998d" fillOpacity="0.8" />
@@ -140,7 +140,7 @@ export function PrivacyEngine() {
               <rect x="416" y="124" width="60" height="20" rx="6" className="fill-gray-100"/>
               <text x="422" y="138" className="fill-gray-700" fontSize="10">warranty</text>
               {/* Server sees: ciphertext only badge */}
-              <rect x="28" y="236" width="180" height="26" rx="6" className="fill-gray-900"/>
+              <rect x="28" y="236" width="180" height="26" rx="6" fill="#111111"/>
               <text x="36" y="254" className="fill-white" fontSize="12">Server sees: ciphertext only</text>
             </svg>
           </div>
@@ -151,9 +151,22 @@ export function PrivacyEngine() {
         </div>
 
         <div className="mt-12 text-center">
-          <a href="#" className="text-sm font-medium text-gray-700 underline-offset-4 hover:underline">Learn more in the docs</a>
+          <a href="#" className="group inline-flex items-center text-sm font-medium text-gray-900 hover:underline underline-offset-4">Learn more in the docs
+            <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="ml-1.5 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5">
+              <path d="M5 12h14" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
+          </a>
         </div>
       </div>
+      <style jsx global>{`
+        @media (prefers-reduced-motion: no-preference) {
+          .crypto-path { stroke-dasharray: 120 28; animation: peDrift 12s linear infinite; }
+          .crypto-path-slow { stroke-dasharray: 140 32; animation: peDrift 16s linear infinite; }
+          .crypto-path-fast { stroke-dasharray: 100 22; animation: peDrift 10s linear infinite; }
+        }
+        @keyframes peDrift { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -240; } }
+      `}</style>
     </section>
   );
 }
