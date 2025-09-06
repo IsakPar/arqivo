@@ -38,7 +38,7 @@ export function AssistantNotify() {
                     <p className="truncate text-sm font-semibold text-gray-900">Warranty expiring soon: MacBook Air receipt</p>
                     <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-700 ring-1 ring-gray-200">in 30 days</span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-gray-600">We found your Apple Store receipt from 2015. Your 3‑year warranty ends on 2018‑04‑12. Would you like to set a reminder or view the document?</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-600">We found your Apple Store receipt from 2022. Your 3‑year warranty ends on 2025‑10‑06. Would you like to set a reminder or view the document?</p>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <button className="inline-flex items-center rounded-full bg-gray-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-black">Set reminder</button>
