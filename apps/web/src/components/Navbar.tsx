@@ -18,7 +18,7 @@ export function Navbar() {
           </Link>
         </div>
         <nav className="flex items-center gap-4 text-sm">
-          <Link href="#how-it-works" className="text-gray-800 hover:text-gray-900">How it works</Link>
+          <Link href="/how-it-works" className="text-gray-800 hover:text-gray-900">How it works</Link>
           <Link href="#pricing" className="text-gray-800 hover:text-gray-900">Pricing</Link>
           {clerkEnabled ? (
             <>
