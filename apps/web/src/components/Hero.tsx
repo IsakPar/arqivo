@@ -44,10 +44,12 @@ function IconShield(props: React.SVGProps<SVGSVGElement>) {
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-white">
-      {/* subtle animated background */}
+      {/* subtle animated background */
+      }
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(700px_240px_at_50%_0%,#eef2ff_25%,transparent_60%)]" />
         <div className="absolute left-1/2 top-8 h-36 w-[120%] -translate-x-1/2 bg-gradient-to-r from-transparent via-gray-200/50 to-transparent [mask-image:linear-gradient(90deg,transparent,black,transparent)] animate-hero-beam" />
+        <div className="absolute left-1/2 top-28 h-24 w-[110%] -translate-x-1/2 bg-gradient-to-r from-transparent via-gray-200/30 to-transparent [mask-image:linear-gradient(90deg,transparent,black,transparent)] animate-hero-beam-slow" />
       </div>
       <div className="mx-auto max-w-5xl px-6 pt-20 pb-24 sm:pt-24 sm:pb-28 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
@@ -73,11 +75,19 @@ export function Hero() {
             End-to-end encrypted. Zero-knowledge by design.
           </p>
           <div className="mt-10 flex items-center justify-center gap-4">
-            <Link href="/sign-up" className="inline-flex items-center rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <Link href="/sign-up" className="group inline-flex items-center rounded-full bg-gradient-to-b from-gray-900 to-black px-6 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(0,0,0,0.15)] transition-all hover:shadow-[0_10px_22px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-gray-400">
               Get Started
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="ml-2 h-4 w-4 opacity-80 transition group-hover:translate-x-0.5">
+                <path d="M5 12h14" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
             </Link>
             <Link href="#how-it-works" className="inline-flex items-center rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300">
               See How It Works
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="ml-1.5 h-4 w-4">
+                <path d="M5 12h14" />
+                <path d="M13 6l6 6-6 6" />
+              </svg>
             </Link>
           </div>
         </div>
@@ -86,8 +96,10 @@ export function Hero() {
       {/* remove floating icons to keep minimal */}
 
       <style jsx global>{`
-        .animate-hero-beam { animation: heroBeam 8s linear infinite; }
-        @keyframes heroBeam { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+        .animate-hero-beam { animation: heroBeam 9s linear infinite; }
+        .animate-hero-beam-slow { animation: heroBeamSlow 14s linear infinite; }
+        @keyframes heroBeam { from { transform: translateX(-12%); } to { transform: translateX(12%); } }
+        @keyframes heroBeamSlow { from { transform: translateX(10%); } to { transform: translateX(-10%); } }
       `}</style>
     </section>
   );
