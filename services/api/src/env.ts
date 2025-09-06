@@ -11,7 +11,15 @@ const envSchema = z.object({
   AWS_S3_ENDPOINT: z.string().optional(),
   AWS_S3_FORCE_PATH_STYLE: z.string().optional(),
   STRICT_AUTH: z.string().optional(),
+  REDIS_URL: z.string().optional(),
+  WEB_ORIGIN: z.string().optional(),
   DEV_AUTH_BYPASS: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_STANDARD: z.string().optional(),
+  STRIPE_PRICE_PRO: z.string().optional(),
+  BILLING_RETURN_URL: z.string().optional(),
+  BILLING_CANCEL_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -25,5 +33,13 @@ export const env = envSchema.parse({
   AWS_S3_ENDPOINT: process.env.AWS_S3_ENDPOINT,
   AWS_S3_FORCE_PATH_STYLE: process.env.AWS_S3_FORCE_PATH_STYLE,
   STRICT_AUTH: process.env.STRICT_AUTH,
+  REDIS_URL: process.env.REDIS_URL,
+  WEB_ORIGIN: process.env.WEB_ORIGIN,
   DEV_AUTH_BYPASS: process.env.DEV_AUTH_BYPASS,
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_PRICE_STANDARD: process.env.STRIPE_PRICE_STANDARD,
+  STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO,
+  BILLING_RETURN_URL: process.env.BILLING_RETURN_URL,
+  BILLING_CANCEL_URL: process.env.BILLING_CANCEL_URL,
 });

@@ -36,6 +36,21 @@ async function main() {
       status int not null,
       bytes int not null default 0
     );
+    create table if not exists billing_customers (
+      account_id uuid primary key references accounts(account_id) on delete cascade,
+      stripe_customer_id text unique not null,
+      created_at timestamptz not null default now()
+    );
+    create table if not exists billing_subscriptions (
+      account_id uuid primary key references accounts(account_id) on delete cascade,
+      stripe_subscription_id text unique not null,
+      plan text not null check (plan in ('free','standard','pro','enterprise')),
+      status text not null,
+      current_period_end timestamptz,
+      cancel_at_period_end boolean not null default false,
+      raw jsonb not null default '{}'::jsonb,
+      updated_at timestamptz not null default now()
+    );
   `);
   console.log('Migration complete.');
 }

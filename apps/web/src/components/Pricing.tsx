@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
 type Plan = {
   name: string;
@@ -12,6 +14,19 @@ type Plan = {
 };
 
 export function Pricing() {
+  const { getToken } = useAuth();
+  const startCheckout = useCallback(async (plan: 'standard'|'pro') => {
+    try {
+      const token = await getToken?.();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'}/billing/checkout`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data?.url) window.location.href = data.url;
+    } catch {}
+  }, [getToken]);
   const plans: Plan[] = [
     {
       name: 'Free',
@@ -33,7 +48,7 @@ export function Pricing() {
         'Unlimited documents',
         'Cloud sync everywhere',
       ],
-      cta: { label: 'Choose Standard', href: '/sign-up' },
+      cta: { label: 'Choose Standard', href: '#' },
       highlight: true,
     },
     {
@@ -45,7 +60,7 @@ export function Pricing() {
         'Secure sharing with other users',
         'Priority support',
       ],
-      cta: { label: 'Choose Pro', href: '/sign-up' },
+      cta: { label: 'Choose Pro', href: '#' },
     },
     {
       name: 'Enterprise',
@@ -86,9 +101,15 @@ export function Pricing() {
                   <li key={f} className="flex items-start gap-2"><span className="mt-[6px] h-1.5 w-1.5 rounded-full bg-gray-400" /> {f}</li>
                 ))}
               </ul>
-              <Link href={p.cta.href} className={`mt-6 inline-flex w-full items-center justify-center rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors ${p.highlight ? 'bg-gray-900 text-white hover:bg-black' : 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50'}`}>
-                {p.cta.label}
-              </Link>
+              {p.name === 'Standard' || p.name === 'Pro' ? (
+                <button onClick={() => startCheckout(p.name.toLowerCase() as 'standard'|'pro')} className={`mt-6 inline-flex w-full items-center justify-center rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors ${p.highlight ? 'bg-gray-900 text-white hover:bg-black' : 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50'}`}>
+                  {p.cta.label}
+                </button>
+              ) : (
+                <Link href={p.cta.href} className={`mt-6 inline-flex w-full items-center justify-center rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors ${p.highlight ? 'bg-gray-900 text-white hover:bg-black' : 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50'}`}>
+                  {p.cta.label}
+                </Link>
+              )}
             </div>
           ))}
         </div>
