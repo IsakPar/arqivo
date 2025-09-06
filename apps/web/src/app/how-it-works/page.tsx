@@ -39,35 +39,59 @@ function SectionHeader() {
 function SystemAtAGlance() {
   return (
     <section className="bg-[#fafafb]">
-      <div className="mx-auto max-w-5xl px-6 py-14 sm:py-16 lg:px-8">
+      <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16 lg:px-8">
         <div className="rounded-3xl border border-white/40 bg-white/50 p-8 shadow-xl backdrop-blur-xl">
           <h2 className="text-center text-xl font-semibold text-gray-900">System at a glance</h2>
           <p className="mt-2 text-center text-sm text-gray-600">Search happens on your device. The cloud only stores ciphertext.</p>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-4">
-            {[
-              { title: 'Your device', desc: 'Local compute. No raw data leaves.' },
-              { title: 'On‑device intelligence', desc: 'OCR · NER · embeddings' },
-              { title: 'Per‑document keys', desc: 'AES‑256‑GCM · Argon2id' },
-              { title: 'Encrypted storage', desc: 'R2/S3 with versioning' },
-            ].map((n, i) => (
-              <div key={n.title} className="relative rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-900">{n.title}</h3>
-                <p className="mt-1 text-xs text-gray-600">{n.desc}</p>
-                {i < 3 && (
-                  <svg aria-hidden viewBox="0 0 120 8" className="absolute -right-14 top-1/2 hidden h-2 w-28 -translate-y-1/2 md:block">
-                    <defs>
-                      <linearGradient id="glanceLine" x1="0" x2="1" y1="0" y2="0">
-                        <stop offset="0%" stopColor="#0f172a" stopOpacity="0.08" />
-                        <stop offset="50%" stopColor="#f1998d" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#0f172a" stopOpacity="0.08" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M4 4 L116 4" stroke="url(#glanceLine)" strokeWidth="1.5" strokeDasharray="6 6" fill="none" />
-                  </svg>
-                )}
-              </div>
-            ))}
+          {/* Unified blueprint diagram */}
+          <div className="mt-8">
+            <svg
+              role="img"
+              aria-labelledby="glance-title glance-desc"
+              viewBox="0 0 1000 240"
+              className="h-auto w-full"
+            >
+              <title id="glance-title">System at a glance</title>
+              <desc id="glance-desc">Data flows from your device through on-device intelligence and encryption to encrypted storage, with recall from a local index.</desc>
+
+              {/* Blueprint line */}
+              <path
+                d="M80 120 C 270 120, 430 120, 520 120 S 770 120, 920 120"
+                fill="none"
+                stroke="#0f172a"
+                strokeOpacity="0.18"
+                strokeWidth="2"
+                strokeDasharray="6 6"
+              />
+
+              {/* Coral pathline animation */}
+              <path
+                className="animate-dash-flow"
+                d="M80 120 C 270 120, 430 120, 520 120 S 770 120, 920 120"
+                fill="none"
+                stroke="#f1998d"
+                strokeWidth="2"
+                strokeDasharray="10 10"
+                strokeLinecap="round"
+              />
+
+              {/* Nodes */}
+              {[
+                { x: 80, y: 120, title: 'Your device', sub: 'Local compute' },
+                { x: 360, y: 120, title: 'On‑device intelligence', sub: 'OCR · NER · embeddings' },
+                { x: 640, y: 120, title: 'Per‑document keys', sub: 'AES‑256‑GCM · Argon2id' },
+                { x: 920, y: 120, title: 'Encrypted storage', sub: 'R2/S3 versioning' },
+              ].map((n, i) => (
+                <g key={n.title} tabIndex={0} role="link" aria-label={`${n.title}. ${n.sub}. Press Enter to continue.`}
+                   onKeyDown={(e) => { if (e.key === 'Enter') (window.location.hash = '#magic-loop'); }}>
+                  <circle cx={n.x} cy={n.y} r="20" fill="#ffffff" stroke="#e5e7eb" />
+                  <circle cx={n.x} cy={n.y} r="4" fill="#0f172a" opacity="0.6" />
+                  <text x={n.x} y={n.y + 40} textAnchor="middle" fontSize="12" fill="#0f172a" fontWeight={600}>{n.title}</text>
+                  <text x={n.x} y={n.y + 58} textAnchor="middle" fontSize="10" fill="#64748b">{n.sub}</text>
+                </g>
+              ))}
+            </svg>
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-2">
@@ -77,6 +101,11 @@ function SystemAtAGlance() {
           </div>
         </div>
       </div>
+      <style jsx global>{`
+        @keyframes dash-flow { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
+        .animate-dash-flow { animation: dash-flow 8s linear infinite; }
+        @media (prefers-reduced-motion: reduce) { .animate-dash-flow { animation: none; } }
+      `}</style>
     </section>
   );
 }
