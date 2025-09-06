@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PrimaryButton } from './ui/PrimaryButton';
 import { SecondaryTextLink } from './ui/SecondaryTextLink';
 import { useAuth } from '@clerk/nextjs';
@@ -16,6 +16,23 @@ type Plan = {
 };
 
 function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro') => void }) {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [lineTop, setLineTop] = useState<number | null>(null);
+  useEffect(() => {
+    function compute() {
+      const root = gridRef.current;
+      if (!root) return;
+      const header = root.querySelector('[data-card-header]') as HTMLElement | null;
+      if (!header) return;
+      const rootBox = root.getBoundingClientRect();
+      const headerBox = header.getBoundingClientRect();
+      // 8px spacing below header
+      setLineTop(Math.max(0, Math.round(headerBox.bottom - rootBox.top + 8)));
+    }
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, []);
   const plans: Plan[] = [
     {
       name: 'Free',
@@ -75,7 +92,12 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
 
         {/* Unified privacy line across plans */}
         <div className="relative mt-12 sm:mt-14">
-          <svg aria-hidden viewBox="0 0 1200 40" className="absolute left-0 top-16 hidden h-8 w-full md:block">
+          <svg
+            aria-hidden
+            viewBox="0 0 1200 40"
+            className="absolute left-0 hidden h-8 w-full md:block"
+            style={{ top: lineTop !== null ? `${lineTop}px` : '64px' }}
+          >
             <defs>
               <linearGradient id="pricingLine" x1="0" x2="1" y1="0" y2="0">
                 <stop offset="0%" stopColor="#0f172a" stopOpacity="0.04" />
@@ -86,7 +108,7 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
             <path d="M60 20 C 300 20, 900 20, 1140 20" stroke="url(#pricingLine)" strokeWidth="1.5" fill="none" strokeDasharray="6 6" />
           </svg>
 
-          <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-4">
+          <div ref={gridRef} className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-4">
             {plans.map((p) => {
               const isStandard = p.name === 'Standard';
               const isEnterprise = p.name === 'Enterprise';
@@ -108,7 +130,7 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
                       />
                     </div>
                   )}
-                  <div className="flex items-baseline justify-between">
+                  <div data-card-header className="flex items-baseline justify-between">
                     <h3 className="text-base font-semibold text-gray-900">{p.name}</h3>
                     {isStandard && (
                       <span className="rounded-full bg-[#f1998d]/15 px-2 py-0.5 text-[11px] font-medium text-[#d76e60] ring-1 ring-inset ring-[#f1998d]/30">Popular</span>
