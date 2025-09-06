@@ -8,7 +8,7 @@ function RibbonBackground() {
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative h-full w-full overflow-hidden">
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] font-mono text-[#f1998d] opacity-[0.06] rotate-[-8deg] animate-crypto-drift">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap text-[10px] font-mono text-[#d9e2f1] opacity-[0.08] rotate-[-8deg] animate-crypto-drift">
             {cryptoString.repeat(18)}
           </div>
         </div>
@@ -40,7 +40,7 @@ function SystemAtAGlance() {
   return (
     <section className="bg-[#fafafb]">
       <div className="mx-auto max-w-6xl px-6 py-14 sm:py-16 lg:px-8">
-        <div className="rounded-3xl border border-white/40 bg-white/50 p-8 shadow-xl backdrop-blur-xl">
+        <div className="rounded-3xl border border-white/50 bg-white/30 p-10 shadow-2xl ring-1 ring-white/30 backdrop-blur-2xl">
           <h2 className="text-center text-xl font-semibold text-gray-900">System at a glance</h2>
           <p className="mt-2 text-center text-sm text-gray-600">Search happens on your device. The cloud only stores ciphertext.</p>
 
@@ -59,9 +59,9 @@ function SystemAtAGlance() {
               <path
                 d="M80 120 C 270 120, 430 120, 520 120 S 770 120, 920 120"
                 fill="none"
-                stroke="#0f172a"
-                strokeOpacity="0.18"
-                strokeWidth="2"
+                stroke="#93a3b8"
+                strokeOpacity="0.28"
+                strokeWidth="2.5"
                 strokeDasharray="6 6"
               />
 
@@ -71,7 +71,7 @@ function SystemAtAGlance() {
                 d="M80 120 C 270 120, 430 120, 520 120 S 770 120, 920 120"
                 fill="none"
                 stroke="#f1998d"
-                strokeWidth="2"
+                strokeWidth="2.5"
                 strokeDasharray="10 10"
                 strokeLinecap="round"
               />
@@ -85,8 +85,8 @@ function SystemAtAGlance() {
               ].map((n, i) => (
                 <g key={n.title} tabIndex={0} role="link" aria-label={`${n.title}. ${n.sub}. Press Enter to continue.`}
                    onKeyDown={(e) => { if (e.key === 'Enter') (window.location.hash = '#magic-loop'); }}>
-                  <circle cx={n.x} cy={n.y} r="20" fill="#ffffff" stroke="#e5e7eb" />
-                  <circle cx={n.x} cy={n.y} r="4" fill="#0f172a" opacity="0.6" />
+                  <circle cx={n.x} cy={n.y} r="22" fill="#ffffff" stroke="#e5e7eb" />
+                  <circle className="glance-node" cx={n.x} cy={n.y} r="6" fill="#0f172a" opacity="0.7" />
                   <text x={n.x} y={n.y + 40} textAnchor="middle" fontSize="12" fill="#0f172a" fontWeight={600}>{n.title}</text>
                   <text x={n.x} y={n.y + 58} textAnchor="middle" fontSize="10" fill="#64748b">{n.sub}</text>
                 </g>
@@ -104,7 +104,14 @@ function SystemAtAGlance() {
       <style jsx global>{`
         @keyframes dash-flow { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
         .animate-dash-flow { animation: dash-flow 8s linear infinite; }
-        @media (prefers-reduced-motion: reduce) { .animate-dash-flow { animation: none; } }
+        @keyframes node-pulse { 0% { transform: scale(1); } 25% { transform: scale(1.08); } 50% { transform: scale(1); } }
+        /* Pulse timing aligned roughly with dash-flow progress across 4 nodes */
+        .glance-node { transform-box: fill-box; transform-origin: center; }
+        .glance-node:nth-of-type(1) { animation: node-pulse 1.2s ease-out 1s 1; }
+        .glance-node:nth-of-type(2) { animation: node-pulse 1.2s ease-out 3s 1; }
+        .glance-node:nth-of-type(3) { animation: node-pulse 1.2s ease-out 5s 1; }
+        .glance-node:nth-of-type(4) { animation: node-pulse 1.2s ease-out 7s 1; }
+        @media (prefers-reduced-motion: reduce) { .animate-dash-flow, .glance-node { animation: none !important; } }
       `}</style>
     </section>
   );
