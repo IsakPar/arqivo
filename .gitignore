@@ -18,3 +18,8 @@ coverage
 pnpm-debug.log*
 .idea
 .vscode
+
+# Ignore local data
+.data/
+services/api/.data/
+
