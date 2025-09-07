@@ -119,7 +119,7 @@ export async function storageRoutes(app: FastifyInstance) {
     const accountId = req.accountId as string;
     const { proposedId } = (req.body as any) || {};
     if (!proposedId || typeof proposedId !== 'string') return reply.code(400).send({ ok: false });
-    const key = `r/${region}/${accountId}/blobs/${proposedId}`;
+    const key = `r/${region}/${accountId}/tmp/${Date.now()}-${proposedId}`;
     const uploadId = await storage.createMultipartUpload({ region, key });
     return { ok: true, uploadId };
   });
