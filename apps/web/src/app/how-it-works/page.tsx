@@ -257,7 +257,7 @@ function ActTwo() {
     const stepCount = steps.length;
     const t = setTimeout(() => setStage((v) => (v + 1) % stepCount), 3000);
     return () => clearTimeout(t);
-  }, [started, hoverPause, stage]);
+  }, [started, hoverPause, stage, steps.length]);
 
   return (
     <section id="magic-loop" ref={sectionRef} className="bg-white">

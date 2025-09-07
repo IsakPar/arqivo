@@ -53,6 +53,34 @@ async function main() {
       updated_at timestamptz not null default now()
     );
   `);
+
+  // Enable RLS and basic policies
+  await query(`
+    alter table if exists accounts enable row level security;
+    alter table if exists devices enable row level security;
+    alter table if exists documents enable row level security;
+    alter table if exists audit_logs enable row level security;
+    alter table if exists quotas enable row level security;
+    alter table if exists billing_customers enable row level security;
+    alter table if exists billing_subscriptions enable row level security;
+
+    -- helper to store current account id in session
+    do $$ begin
+      create or replace function set_app_account(a uuid) returns void as $$
+      begin
+        perform set_config('app.account_id', a::text, true);
+      end;$$ language plpgsql;
+    exception when others then null; end $$;
+
+    -- policies: allow owner, block others (documents and quotas shown; extend similarly where needed)
+    do $$ begin
+      create policy documents_owner on documents using (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+
+    do $$ begin
+      create policy quotas_owner on quotas using (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+  `);
   console.log('Migration complete.');
 }
 

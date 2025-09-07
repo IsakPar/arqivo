@@ -117,6 +117,16 @@ export async function storageRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
+  app.post('/v1/blobs/multipart/abort', async (req, reply) => {
+    const region = (req.regionCode || 'us') as 'us' | 'eu';
+    const accountId = req.accountId as string;
+    const { uploadId, id } = (req.body as any) || {};
+    if (!uploadId || !id) return reply.code(400).send({ ok: false });
+    const key = `r/${region}/${accountId}/blobs/${id}`;
+    try { await storage.abortMultipart({ region, key, uploadId }); } catch {}
+    return { ok: true };
+  });
+
   // Idempotency probe
   app.head<{ Params: { id: string } }>('/v1/blobs/:id', async (req, reply) => {
     const region = (req.regionCode || (req.query as any)?.region || 'us') as 'us' | 'eu';

@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { config as loadEnv } from 'dotenv';
+import * as Sentry from '@sentry/node';
 import { env } from './env.js';
 import cors from '@fastify/cors';
 import { authRoutes } from './routes/auth.js';
@@ -28,6 +29,22 @@ async function start() {
     },
     bodyLimit: 100 * 1024 * 1024,
   });
+
+  // Sentry (guarded)
+  if (process.env.SENTRY_DSN) {
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1) });
+    server.addHook('onError', async (_req, _reply, err) => {
+      try {
+        // scrub headers quickly
+        const e = err as any;
+        if (e && e.headers) {
+          delete e.headers['authorization'];
+          delete e.headers['cookie'];
+        }
+        Sentry.captureException(err);
+      } catch {}
+    });
+  }
 
   await server.register(helmet);
   await server.register(cors, {

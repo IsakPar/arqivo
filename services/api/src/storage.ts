@@ -91,6 +91,16 @@ export class StorageService {
     await this.client.send(new CompleteMultipartUploadCommand({ Bucket, Key, UploadId: params.uploadId, MultipartUpload: { Parts: params.parts } }));
   }
 
+  async abortMultipart(params: { region: RegionCode; key: string; uploadId: string }) {
+    if (this.useLocal) return;
+    const Bucket = bucketForRegion(params.region);
+    const Key = params.key;
+    // AWS SDK v3 does not require explicit Abort command import here; using DeleteObject is insufficient.
+    // We choose to ignore at runtime if not supported in local stub.
+    const { AbortMultipartUploadCommand } = await import('@aws-sdk/client-s3');
+    await this.client.send(new AbortMultipartUploadCommand({ Bucket, Key, UploadId: params.uploadId } as any));
+  }
+
   async deleteObject(params: { region: RegionCode; key: string }): Promise<void> {
     if (this.useLocal) {
       const file = path.join(this.baseDir, params.key);
