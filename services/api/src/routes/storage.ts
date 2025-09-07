@@ -48,11 +48,13 @@ export async function storageRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ ok: false });
 
     // Pre-check content-length to avoid streaming huge payloads
-    const cl = Number(req.headers['content-length']);
-    const hardMax = Number(process.env.MAX_BLOB_BYTES ?? 50_000_000);
-    if (!Number.isNaN(cl) && cl > hardMax) {
-      return sendError(reply, 413, 'payload_too_large', req.id as string);
-    }
+    try {
+      const cl = Number(req.headers['content-length']);
+      const hardMax = Number(process.env.MAX_BLOB_BYTES ?? 50_000_000);
+      if (!Number.isNaN(cl) && cl > hardMax) {
+        return sendError(reply, 413, 'payload_too_large', req.id as string);
+      }
+    } catch {}
 
     const accountId = req.accountId as string;
     const maybeLimited = await withUploadSlot(accountId, async () => {
@@ -64,11 +66,13 @@ export async function storageRoutes(app: FastifyInstance) {
     }
     // Compute content-addressed id and verify optional integrity header
     const computedId = createHash('sha256').update(body).digest('hex');
-    const headerHashRaw = req.headers['x-cipher-hash'];
-    const headerHash = typeof headerHashRaw === 'string' ? headerHashRaw.replace(/^sha256:/i, '').toLowerCase() : undefined;
-    if (headerHash && computedId !== headerHash) {
-      return sendError(reply, 400, 'bad_integrity', req.id as string);
-    }
+    try {
+      const headerHashRaw = req.headers['x-cipher-hash'];
+      const headerHash = typeof headerHashRaw === 'string' ? headerHashRaw.replace(/^sha256:/i, '').toLowerCase() : undefined;
+      if (headerHash && computedId !== headerHash) {
+        return sendError(reply, 400, 'bad_integrity', req.id as string);
+      }
+    } catch {}
     if (req.params.id && req.params.id !== computedId) {
       return sendError(reply, 409, 'id_mismatch', req.id as string, { expectedId: computedId });
     }

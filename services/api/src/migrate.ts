@@ -1,6 +1,6 @@
 import { query } from './db.js';
 
-async function main() {
+export async function runMigrations() {
   await query(`
     create table if not exists accounts (
       account_id uuid primary key,
@@ -107,6 +107,9 @@ async function main() {
     exception when others then null; end $$;
   `);
   console.log('Migration complete.');
+}
+async function main() {
+  await runMigrations();
 }
 
 main().catch((err) => {
