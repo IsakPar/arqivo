@@ -72,13 +72,38 @@ async function main() {
       end;$$ language plpgsql;
     exception when others then null; end $$;
 
-    -- policies: allow owner, block others (documents and quotas shown; extend similarly where needed)
+    -- policies: allow owner, block others
+    -- documents
     do $$ begin
-      create policy documents_owner on documents using (account_id::text = current_setting('app.account_id', true));
+      create policy documents_owner on documents using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
     exception when others then null; end $$;
 
+    -- quotas
     do $$ begin
-      create policy quotas_owner on quotas using (account_id::text = current_setting('app.account_id', true));
+      create policy quotas_owner on quotas using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+
+    -- devices
+    do $$ begin
+      create policy devices_owner on devices using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+
+    -- billing tables
+    do $$ begin
+      create policy billing_customers_owner on billing_customers using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+    do $$ begin
+      create policy billing_subscriptions_owner on billing_subscriptions using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
+    exception when others then null; end $$;
+
+    -- audit logs: allow insert/select for any (non-sensitive) for now
+    do $$ begin
+      create policy audit_any on audit_logs using (true) with check (true);
+    exception when others then null; end $$;
+
+    -- accounts: temporarily allow any; tighten later with service role or dedicated view
+    do $$ begin
+      create policy accounts_any on accounts using (true) with check (true);
     exception when others then null; end $$;
   `);
   console.log('Migration complete.');
