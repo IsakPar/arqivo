@@ -13,6 +13,7 @@ export class StorageService {
   private client: S3Client;
   private useLocal: boolean;
   private baseDir: string;
+  private breaker: Map<string, { failures: number; openUntil: number }> = new Map();
 
   constructor() {
     this.useLocal = process.env.NODE_ENV === 'test' || process.env.STORAGE_MODE === 'local';
@@ -26,6 +27,32 @@ export class StorageService {
     });
   }
 
+  private async withTimeoutAndBreaker<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    if (this.useLocal) return fn();
+    const now = Date.now();
+    const state = this.breaker.get(key) || { failures: 0, openUntil: 0 };
+    if (state.openUntil > now) {
+      throw new Error(`circuit_open:${key}`);
+    }
+    const timeoutMs = Number(process.env.S3_REQUEST_TIMEOUT_MS ?? 8000);
+    const failThreshold = Number(process.env.CB_FAIL_THRESHOLD ?? 5);
+    const cooldown = Number(process.env.CB_COOLDOWN_MS ?? 15000);
+    try {
+      const res = await Promise.race<T>([
+        fn(),
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('s3_timeout')), timeoutMs)),
+      ]);
+      // success -> reset
+      this.breaker.set(key, { failures: 0, openUntil: 0 });
+      return res;
+    } catch (e) {
+      const f = state.failures + 1;
+      const openUntil = f >= failThreshold ? now + cooldown : 0;
+      this.breaker.set(key, { failures: f, openUntil });
+      throw e;
+    }
+  }
+
   async putObject(params: { region: RegionCode; key: string; body: Uint8Array; contentType?: string }) {
     if (this.useLocal) {
       const file = path.join(this.baseDir, params.key);
@@ -35,7 +62,9 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    await this.client.send(new PutObjectCommand({ Bucket, Key, Body: Buffer.from(params.body), ContentType: params.contentType ?? 'application/octet-stream' }));
+    await this.withTimeoutAndBreaker('putObject', async () => {
+      await this.client.send(new PutObjectCommand({ Bucket, Key, Body: Buffer.from(params.body), ContentType: params.contentType ?? 'application/octet-stream' }));
+    });
   }
 
   async headObject(params: { region: RegionCode; key: string }) {
@@ -46,7 +75,7 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    return this.client.send(new HeadObjectCommand({ Bucket, Key }));
+    return this.withTimeoutAndBreaker('headObject', async () => this.client.send(new HeadObjectCommand({ Bucket, Key })) as any);
   }
 
   async getObject(params: { region: RegionCode; key: string }): Promise<Uint8Array> {
@@ -57,8 +86,8 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    const res = await this.client.send(new GetObjectCommand({ Bucket, Key }));
-    const arrayBuf = await (res.Body as any).transformToByteArray();
+    const res = await this.withTimeoutAndBreaker('getObject', async () => this.client.send(new GetObjectCommand({ Bucket, Key })) as any);
+    const arrayBuf = await (res as any).Body.transformToByteArray();
     return new Uint8Array(arrayBuf);
   }
 
@@ -69,8 +98,8 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    const res = await this.client.send(new CreateMultipartUploadCommand({ Bucket, Key, ContentType: params.contentType ?? 'application/octet-stream' }));
-    return res.UploadId as string;
+    const res = await this.withTimeoutAndBreaker('createMultipart', async () => this.client.send(new CreateMultipartUploadCommand({ Bucket, Key, ContentType: params.contentType ?? 'application/octet-stream' })) as any);
+    return (res as any).UploadId as string;
   }
 
   async uploadPart(params: { region: RegionCode; key: string; uploadId: string; partNumber: number; body: Uint8Array }) {
@@ -80,15 +109,17 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    const res = await this.client.send(new UploadPartCommand({ Bucket, Key, UploadId: params.uploadId, PartNumber: params.partNumber, Body: Buffer.from(params.body) }));
-    return res.ETag as string;
+    const res = await this.withTimeoutAndBreaker('uploadPart', async () => this.client.send(new UploadPartCommand({ Bucket, Key, UploadId: params.uploadId, PartNumber: params.partNumber, Body: Buffer.from(params.body) })) as any);
+    return (res as any).ETag as string;
   }
 
   async completeMultipart(params: { region: RegionCode; key: string; uploadId: string; parts: { ETag: string; PartNumber: number }[] }) {
     if (this.useLocal) return;
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    await this.client.send(new CompleteMultipartUploadCommand({ Bucket, Key, UploadId: params.uploadId, MultipartUpload: { Parts: params.parts } }));
+    await this.withTimeoutAndBreaker('completeMultipart', async () => {
+      await this.client.send(new CompleteMultipartUploadCommand({ Bucket, Key, UploadId: params.uploadId, MultipartUpload: { Parts: params.parts } }));
+    });
   }
 
   async abortMultipart(params: { region: RegionCode; key: string; uploadId: string }) {
@@ -109,7 +140,9 @@ export class StorageService {
     }
     const Bucket = bucketForRegion(params.region);
     const Key = params.key;
-    await this.client.send(new DeleteObjectCommand({ Bucket, Key }));
+    await this.withTimeoutAndBreaker('deleteObject', async () => {
+      await this.client.send(new DeleteObjectCommand({ Bucket, Key }));
+    });
   }
 }
 
