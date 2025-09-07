@@ -42,6 +42,8 @@ async function start() {
   await server.register(rateLimit, {
     max: 1000,
     timeWindow: '1 minute',
+    hook: 'onRequest',
+    keyGenerator: (req) => `${(req as any).accountId || 'anon'}:${req.ip}`,
   });
 
   // Accept binary bodies for blob uploads; keep raw for Stripe webhook

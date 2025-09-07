@@ -66,6 +66,16 @@ export function AppShell({ children }: Props) {
   const { getToken } = useAuth();
   const [inboxOpen, setInboxOpen] = React.useState(false);
   const [unread, setUnread] = React.useState(0);
+
+  React.useEffect(() => {
+    try {
+      const v = localStorage.getItem('inbox_unread');
+      if (v) setUnread(Number(v) || 0);
+    } catch {}
+  }, []);
+  React.useEffect(() => {
+    try { localStorage.setItem('inbox_unread', String(unread)); } catch {}
+  }, [unread]);
   const { Modal, setOpen, setQ } = useCommandPalette([
     { id: 'upload', label: 'Upload file…', shortcut: '⌘U', run: async () => {
       // trigger hidden file input via synthetic click

@@ -48,6 +48,18 @@ export async function documentRoutes(app: FastifyInstance) {
     await query('delete from documents where account_id=$1 and doc_id=$2', [accountId, req.params.id]);
     return { ok: true };
   });
+
+  // Store wrapped file key (bytea) after client-side encryption
+  app.post<{ Params: { id: string } }>('/v1/documents/:id/wrap', async (req, reply) => {
+    const accountId = req.accountId as string;
+    const body = (req.body as any) || {};
+    const wrappedFkHex = (body.wrappedFkHex as string | undefined)?.toLowerCase();
+    if (!wrappedFkHex || !/^[0-9a-f]+$/i.test(wrappedFkHex)) {
+      return reply.code(400).send({ ok: false, code: 'invalid_input' });
+    }
+    await query('update documents set wrapped_fk=$1 where account_id=$2 and doc_id=$3', [Buffer.from(wrappedFkHex, 'hex'), accountId, req.params.id]);
+    return { ok: true };
+  });
 }
 
 

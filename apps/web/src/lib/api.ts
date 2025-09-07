@@ -68,4 +68,9 @@ export async function deleteDocument(id: string, token?: string): Promise<void> 
   if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
 }
 
+export async function putWrappedFk(id: string, wrappedFkHex: string, token?: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/v1/documents/${id}/wrap`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ wrappedFkHex }) });
+  if (!res.ok) throw new Error(`Wrap FK failed: ${res.status}`);
+}
+
 

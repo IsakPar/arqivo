@@ -7,7 +7,13 @@ import { encryptAndUploadFile } from '../../lib/workspace';
 
 export default function WorkspacePage() {
   const [docs, setDocs] = useState<Array<{ id: string; sizeBytes: number; region: 'us'|'eu'; createdAt: string }>>([]);
-  const [sort, setSort] = useState<{ key: 'name'|'size'|'date'; dir: 'asc'|'desc' }>({ key: 'date', dir: 'desc' });
+  const [sort, setSort] = useState<{ key: 'name'|'size'|'date'; dir: 'asc'|'desc' }>(() => {
+    try {
+      const raw = localStorage.getItem('ws_sort');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return { key: 'date', dir: 'desc' };
+  });
   const [cursor, setCursor] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const { getToken } = useAuth();
@@ -31,7 +37,7 @@ export default function WorkspacePage() {
     }
   }
 
-  useEffect(() => { void refresh(); }, [sort]);
+  useEffect(() => { try { localStorage.setItem('ws_sort', JSON.stringify(sort)); } catch {} ; void refresh(); }, [sort]);
   useEffect(() => {
     function onReq() { void refresh(); }
     window.addEventListener('arqivo:refresh-docs', onReq as any);
@@ -58,10 +64,21 @@ export default function WorkspacePage() {
     await refresh();
   }
 
+  const [view, setView] = useState<'list'|'tree'>(() => {
+    try { return (localStorage.getItem('ws_view') as any) || 'list'; } catch { return 'list'; }
+  });
+  useEffect(() => { try { localStorage.setItem('ws_view', view); } catch {} }, [view]);
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <section>
-        <h1 className="sr-only">Files</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="sr-only">Files</h1>
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => setView('list')} className={`rounded-md border px-2 py-1 text-xs ${view==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>List</button>
+            <button onClick={() => setView('tree')} className={`rounded-md border px-2 py-1 text-xs ${view==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>Tree</button>
+          </div>
+        </div>
         {/* Empty state when no docs */}
         {docs.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center md:p-16">
@@ -93,6 +110,38 @@ export default function WorkspacePage() {
           <p className="mt-4 text-sm text-gray-600">Loading…</p>
         ) : docs.length === 0 ? (
           <p className="mt-4 text-sm text-gray-600">No documents yet.</p>
+        ) : view === 'tree' ? (
+          <div className="mt-4 overflow-hidden rounded-lg border border-gray-100">
+            {/* Tree scaffold: group by Year -> Month */}
+            {Object.entries(
+              docs.reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
+                const dt = new Date(d.createdAt);
+                const y = String(dt.getFullYear());
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                acc[y] = acc[y] || {};
+                acc[y][m] = acc[y][m] || [];
+                acc[y][m].push(d);
+                return acc;
+              }, {})
+            ).map(([year, months]) => (
+              <div key={year} className="border-b border-gray-100">
+                <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-800">{year}</div>
+                {Object.entries(months).map(([month, rows]) => (
+                  <div key={month} className="px-3 py-2">
+                    <div className="text-xs text-gray-700">{year}-{month}</div>
+                    <ul className="mt-1 divide-y divide-gray-100 rounded-md border border-gray-100">
+                      {rows.map((d) => (
+                        <li key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                          <span className="truncate text-gray-900">{d.id}</span>
+                          <span className="text-gray-600">{(d.sizeBytes/1024).toFixed(1)} KB</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="mt-4 overflow-hidden rounded-lg border border-gray-100" onKeyDown={(e) => {
             if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c+1, docs.length-1)); }

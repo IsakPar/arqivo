@@ -17,7 +17,19 @@ export type ErrorCode =
 export function sendError(reply: FastifyReply, status: number, code: ErrorCode, requestId?: string, extra?: Record<string, unknown>) {
   const body: Record<string, unknown> = { ok: false, code };
   if (requestId) body.requestId = requestId;
-  if (extra) Object.assign(body, extra);
+  if (extra) {
+    // Shallow sanitize: trim long strings and drop tokens
+    const safe: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(extra)) {
+      if (typeof v === 'string') {
+        if (/token|authorization|password/i.test(k)) continue;
+        safe[k] = v.length > 200 ? v.slice(0, 200) : v;
+      } else {
+        safe[k] = v as unknown;
+      }
+    }
+    Object.assign(body, safe);
+  }
   return reply.code(status).send(body);
 }
 
