@@ -21,6 +21,9 @@ const envSchema = z.object({
   BILLING_RETURN_URL: z.string().optional(),
   BILLING_CANCEL_URL: z.string().optional(),
   ENTERPRISE_UPLOAD_CONCURRENCY: z.string().optional(),
+  ENABLE_OTEL: z.string().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
+  OTEL_SERVICE_NAME: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -44,4 +47,7 @@ export const env = envSchema.parse({
   BILLING_RETURN_URL: process.env.BILLING_RETURN_URL,
   BILLING_CANCEL_URL: process.env.BILLING_CANCEL_URL,
   ENTERPRISE_UPLOAD_CONCURRENCY: process.env.ENTERPRISE_UPLOAD_CONCURRENCY,
+  ENABLE_OTEL: process.env.ENABLE_OTEL,
+  OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+  OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
 });

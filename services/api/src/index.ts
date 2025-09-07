@@ -3,6 +3,10 @@ import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { config as loadEnv } from 'dotenv';
 import * as Sentry from '@sentry/node';
+import { DiagConsoleLogger, DiagLogLevel, diag } from '@opentelemetry/api';
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { env } from './env.js';
 import { env } from './env.js';
 import cors from '@fastify/cors';
 import { authRoutes } from './routes/auth.js';
@@ -23,6 +27,19 @@ import { stripeWebhookRoute } from './routes/stripeWebhook.js';
 loadEnv();
 
 async function start() {
+  // OpenTelemetry (guarded)
+  let sdk: NodeSDK | null = null;
+  if ((env.ENABLE_OTEL || '').toLowerCase() === 'true') {
+    try {
+      diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+      sdk = new NodeSDK({
+        serviceName: env.OTEL_SERVICE_NAME || 'arqivo-api',
+        traceExporter: undefined, // use OTLP via env if configured
+        instrumentations: [getNodeAutoInstrumentations()],
+      });
+      await sdk.start();
+    } catch {}
+  }
   const server = Fastify({
     logger: {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
