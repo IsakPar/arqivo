@@ -68,14 +68,30 @@ export default function WorkspacePage() {
   });
   useEffect(() => { try { localStorage.setItem('ws_view', view); } catch {} }, [view]);
 
+  // Sync with global header view toggle
+  useEffect(() => {
+    function onView(e: any) {
+      const next = e?.detail === 'tree' ? 'tree' : 'list';
+      setView(next);
+    }
+    window.addEventListener('arqivo:view', onView as any);
+    return () => window.removeEventListener('arqivo:view', onView as any);
+  }, []);
+
+  function setViewAndEmit(next: 'list'|'tree') {
+    setView(next);
+    try { window.dispatchEvent(new CustomEvent('arqivo:view', { detail: next })); } catch {}
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <section>
         <div className="flex items-center justify-between">
           <h1 className="sr-only">Files</h1>
           <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => setView('list')} className={`rounded-md border px-2 py-1 text-xs ${view==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>List</button>
-            <button onClick={() => setView('tree')} className={`rounded-md border px-2 py-1 text-xs ${view==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>Tree</button>
+            {/* Mobile view toggle (header has desktop toggle) */}
+            <button onClick={() => setViewAndEmit('list')} className={`md:hidden rounded-md border px-2 py-1 text-xs ${view==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>List</button>
+            <button onClick={() => setViewAndEmit('tree')} className={`md:hidden rounded-md border px-2 py-1 text-xs ${view==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>Tree</button>
           </div>
         </div>
         {/* Empty state when no docs */}

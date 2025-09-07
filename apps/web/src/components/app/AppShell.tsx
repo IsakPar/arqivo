@@ -16,6 +16,9 @@ export function AppShell({ children }: Props) {
   const [uploadDone, setUploadDone] = React.useState(0);
   const [maxPerBatch, setMaxPerBatch] = React.useState<number>(1);
   const { getToken } = useAuth();
+  const [viewMode, setViewMode] = React.useState<'list'|'tree'>(() => {
+    try { return (localStorage.getItem('ws_view') as any) || 'list'; } catch { return 'list'; }
+  });
 
   // Fetch plan and set client-side batch limit
   React.useEffect(() => {
@@ -41,6 +44,19 @@ export function AppShell({ children }: Props) {
   React.useEffect(() => {
     try { localStorage.setItem('ws_sidebar', sidebarOpen ? '1' : '0'); } catch {}
   }, [sidebarOpen]);
+
+  // Persist and broadcast view mode changes
+  React.useEffect(() => {
+    try { localStorage.setItem('ws_view', viewMode); } catch {}
+    try { window.dispatchEvent(new CustomEvent('arqivo:view', { detail: viewMode })); } catch {}
+  }, [viewMode]);
+
+  // Keep header in sync if another component updates the view
+  React.useEffect(() => {
+    function onView(e: any) { setViewMode(e?.detail === 'tree' ? 'tree' : 'list'); }
+    window.addEventListener('arqivo:view', onView as any);
+    return () => window.removeEventListener('arqivo:view', onView as any);
+  }, []);
 
   function onDragEnter(e: React.DragEvent) { e.preventDefault(); setDragging(true); }
   function onDragOver(e: React.DragEvent) { e.preventDefault(); }
@@ -103,6 +119,9 @@ export function AppShell({ children }: Props) {
     }},
     { id: 'settings', label: 'Open Settings', shortcut: '⌘,', run: () => { window.location.href = '/workspace/settings'; }},
     { id: 'inbox', label: 'Open Inbox', shortcut: '⌘I', run: () => { setInboxOpen(true); }},
+    { id: 'toggle-view', label: 'Toggle view (List/Tree)', shortcut: '⌘T', run: () => {
+      setViewMode(v => (v === 'list' ? 'tree' : 'list'));
+    }},
   ]);
 
   async function onHiddenFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -114,6 +133,7 @@ export function AppShell({ children }: Props) {
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); setInboxOpen(o => !o); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') { e.preventDefault(); setViewMode(v => (v === 'list' ? 'tree' : 'list')); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -136,6 +156,25 @@ export function AppShell({ children }: Props) {
           />
         </div>
         <div className="ml-3 flex items-center gap-3">
+          {/* View toggle */}
+          <div role="group" aria-label="View mode" className="hidden md:flex items-center gap-1">
+            <button
+              aria-pressed={viewMode==='list'}
+              onClick={() => setViewMode('list')}
+              title="List view (⌘T)"
+              className={`rounded-md border px-2 py-1 text-xs ${viewMode==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}
+            >
+              List
+            </button>
+            <button
+              aria-pressed={viewMode==='tree'}
+              onClick={() => setViewMode('tree')}
+              title="Tree view (⌘T)"
+              className={`rounded-md border px-2 py-1 text-xs ${viewMode==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}
+            >
+              Tree
+            </button>
+          </div>
           <button onClick={() => { setOpen(true); setQ(''); }} className="text-sm text-gray-700 hover:text-gray-900">⌘K</button>
           <input id="ws-hidden-file" type="file" className="hidden" onChange={onHiddenFileChange} />
           <div className="relative">
