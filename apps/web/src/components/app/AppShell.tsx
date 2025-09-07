@@ -15,6 +15,8 @@ export function AppShell({ children }: Props) {
   const [uploadTotal, setUploadTotal] = React.useState(0);
   const [uploadDone, setUploadDone] = React.useState(0);
   const [maxPerBatch, setMaxPerBatch] = React.useState<number>(1);
+  const { getToken } = useAuth();
+
   // Fetch plan and set client-side batch limit
   React.useEffect(() => {
     (async () => {
@@ -80,7 +82,7 @@ export function AppShell({ children }: Props) {
     }
   }
 
-  const { getToken } = useAuth();
+  
   const [inboxOpen, setInboxOpen] = React.useState(false);
   const [unread, setUnread] = React.useState(0);
 

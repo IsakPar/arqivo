@@ -20,6 +20,7 @@ const envSchema = z.object({
   STRIPE_PRICE_PRO: z.string().optional(),
   BILLING_RETURN_URL: z.string().optional(),
   BILLING_CANCEL_URL: z.string().optional(),
+  ENTERPRISE_UPLOAD_CONCURRENCY: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -42,4 +43,5 @@ export const env = envSchema.parse({
   STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO,
   BILLING_RETURN_URL: process.env.BILLING_RETURN_URL,
   BILLING_CANCEL_URL: process.env.BILLING_CANCEL_URL,
+  ENTERPRISE_UPLOAD_CONCURRENCY: process.env.ENTERPRISE_UPLOAD_CONCURRENCY,
 });
