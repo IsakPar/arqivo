@@ -55,6 +55,15 @@ export async function aesGcmEncrypt(keyBytes: Uint8Array, plaintext: Uint8Array,
   return { iv, ciphertext: ct, packed: concatBytes(iv, ct) };
 }
 
+export async function aesGcmDecrypt(keyBytes: Uint8Array, packed: Uint8Array, aad?: Uint8Array) {
+  const key = await importAesKey(keyBytes);
+  const iv = packed.slice(0, 12);
+  const ct = packed.slice(12);
+  const params: AesGcmParams = { name: 'AES-GCM', iv: toStrictArrayBuffer(iv), additionalData: aad ? toStrictArrayBuffer(aad) : undefined };
+  const pt = await crypto.subtle.decrypt(params, key, toStrictArrayBuffer(ct));
+  return new Uint8Array(pt);
+}
+
 export async function sha256Hex(input: Uint8Array): Promise<string> {
   const ab = toStrictArrayBuffer(input);
   const hash = await crypto.subtle.digest('SHA-256', ab);

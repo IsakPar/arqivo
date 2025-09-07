@@ -23,11 +23,10 @@ export function Navbar() {
           {clerkEnabled ? (
             <>
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="px-3 py-1.5 text-gray-900 transition-colors hover:opacity-80">Sign in</button>
-                </SignInButton>
+                <Link href="/sign-in" className="px-3 py-1.5 text-gray-900 transition-colors hover:opacity-80">Sign in</Link>
               </SignedOut>
               <SignedIn>
+                <Link href="/workspace" className="px-3 py-1.5 text-gray-900 transition-colors hover:opacity-80">Workspace</Link>
                 <PlanChip />
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>

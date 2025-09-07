@@ -128,7 +128,7 @@ export function Addendum() {
             {/* Left: cryptic file */}
             <div
               className={classNames(
-                'absolute left-8 top-1/2 -translate-y-1/2 w-80',
+                'absolute left-8 top-1/2 -translate-y-1/2 w-72 z-0',
                 'transition-all duration-700',
                 phase === 'before' && !reduced && 'opacity-100 translate-x-0',
                 phase === 'process' && !reduced && 'opacity-100 translate-x-4',
@@ -141,7 +141,7 @@ export function Addendum() {
             </div>
 
             {/* Center: brand mark */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
               <div
                 className={classNames(
                   'flex h-16 w-16 items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm',
@@ -162,7 +162,7 @@ export function Addendum() {
             {/* Right: understood file with tags */}
             <div
               className={classNames(
-                'absolute right-8 top-1/2 -translate-y-1/2 w-96',
+                'absolute right-8 top-1/2 -translate-y-1/2 w-72 z-0',
                 'transition-all duration-700',
                 phase === 'after' && !reduced && 'opacity-100 translate-x-0',
                 phase !== 'after' && !reduced && 'opacity-0 translate-x-4',

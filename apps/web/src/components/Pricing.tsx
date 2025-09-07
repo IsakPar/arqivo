@@ -41,7 +41,7 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
       features: [
         'End‑to‑end encrypted',
         'Zero‑knowledge by design',
-        'Cloud access from any device',
+        'Cloud access (multi‑device coming soon)',
       ],
       cta: { label: 'Get started', href: '/sign-up' },
     },
@@ -52,7 +52,7 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
       features: [
         'All Free features',
         'Unlimited documents',
-        'Cloud sync everywhere',
+        'Cloud sync everywhere (enforcement coming soon)',
       ],
       cta: { label: 'Choose Standard', href: '#' },
       highlight: true,
@@ -63,7 +63,6 @@ function BasePricing({ startCheckout }: { startCheckout?: (plan: 'standard'|'pro
       subtitle: '2 TB encrypted storage',
       features: [
         'All Standard features',
-        'Secure sharing with other users',
         'Priority support',
       ],
       cta: { label: 'Choose Pro', href: '#' },

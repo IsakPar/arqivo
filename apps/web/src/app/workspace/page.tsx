@@ -1,0 +1,134 @@
+"use client";
+import { useEffect, useState } from 'react';
+import { deleteDocument, getBlob, listDocuments } from '../../lib/api';
+import { aesGcmDecrypt, getOrCreateVaultKey } from '../../lib/crypto';
+import { useAuth } from '@clerk/nextjs';
+import { encryptAndUploadFile } from '../../lib/workspace';
+
+export default function WorkspacePage() {
+  const [docs, setDocs] = useState<Array<{ id: string; sizeBytes: number; region: 'us'|'eu'; createdAt: string }>>([]);
+  const [sort, setSort] = useState<{ key: 'name'|'size'|'date'; dir: 'asc'|'desc' }>({ key: 'date', dir: 'desc' });
+  const [cursor, setCursor] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const { getToken } = useAuth();
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const token = await getToken?.();
+      let list = await listDocuments(token || undefined);
+      // Sorting
+      list = list.sort((a, b) => {
+        if (sort.key === 'name') return sort.dir === 'asc' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+        if (sort.key === 'size') return sort.dir === 'asc' ? a.sizeBytes - b.sizeBytes : b.sizeBytes - a.sizeBytes;
+        const ad = new Date(a.createdAt).getTime();
+        const bd = new Date(b.createdAt).getTime();
+        return sort.dir === 'asc' ? ad - bd : bd - ad;
+      });
+      setDocs(list);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void refresh(); }, [sort]);
+  useEffect(() => {
+    function onReq() { void refresh(); }
+    window.addEventListener('arqivo:refresh-docs', onReq as any);
+    return () => window.removeEventListener('arqivo:refresh-docs', onReq as any);
+  }, []);
+
+  async function onDownload(id: string, region: 'us'|'eu') {
+    const token = await getToken?.();
+    const packed = await getBlob(id, region, token || undefined);
+    const kv = getOrCreateVaultKey();
+    const pt = await aesGcmDecrypt(kv, packed);
+    const blob = new Blob([pt], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = id;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function onDelete(id: string) {
+    const token = await getToken?.();
+    await deleteDocument(id, token || undefined);
+    await refresh();
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-6xl px-4 py-6">
+      <section>
+        <h1 className="sr-only">Files</h1>
+        {/* Empty state when no docs */}
+        {docs.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center md:p-16">
+            <p className="text-sm text-gray-800">Your workspace is ready.</p>
+            <p className="mt-1 text-sm text-gray-600">Drag a file here or press Cmd+U to upload.</p>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-gray-800">Your documents</h2>
+          <div className="flex items-center gap-3">
+            <label className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 hover:bg-gray-50">
+              <input type="file" className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const token = await getToken?.();
+                await encryptAndUploadFile(file, 'us', token || undefined);
+                await refresh();
+                e.currentTarget.value = '';
+              }} />
+              New…
+            </label>
+            <button onClick={() => refresh()} className="text-sm text-gray-900 hover:opacity-80">Refresh</button>
+          </div>
+        </div>
+        {loading ? (
+          <p className="mt-4 text-sm text-gray-600">Loading…</p>
+        ) : docs.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-600">No documents yet.</p>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-lg border border-gray-100" onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c+1, docs.length-1)); }
+            if (e.key === 'ArrowUp') { e.preventDefault(); setCursor(c => Math.max(c-1, 0)); }
+            if (e.key === 'Enter') { const d = docs[cursor]; if (d) void onDownload(d.id, d.region); }
+            if (e.key === 'Backspace' || e.key === 'Delete') { const d = docs[cursor]; if (d) void onDelete(d.id); }
+          }} tabIndex={0}>
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50 text-left text-xs text-gray-600">
+                <tr>
+                  <th className="w-7/12 px-3 py-2 font-medium">
+                    <button className="flex items-center gap-1" onClick={() => setSort(s => ({ key: 'name', dir: s.key==='name' && s.dir==='asc' ? 'desc' : 'asc' }))}>Name {sort.key==='name' ? (sort.dir==='asc' ? '↑' : '↓') : ''}</button>
+                  </th>
+                  <th className="w-2/12 px-3 py-2 font-medium">
+                    <button className="flex items-center gap-1" onClick={() => setSort(s => ({ key: 'size', dir: s.key==='size' && s.dir==='asc' ? 'desc' : 'asc' }))}>Size {sort.key==='size' ? (sort.dir==='asc' ? '↑' : '↓') : ''}</button>
+                  </th>
+                  <th className="w-2/12 px-3 py-2 font-medium">
+                    <button className="flex items-center gap-1" onClick={() => setSort(s => ({ key: 'date', dir: s.key==='date' && s.dir==='asc' ? 'desc' : 'asc' }))}>Modified {sort.key==='date' ? (sort.dir==='asc' ? '↑' : '↓') : ''}</button>
+                  </th>
+                  <th className="w-1/12 px-3 py-2 font-medium">Shared</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-sm">
+                {docs.map((d, i) => (
+                  <tr key={d.id} className={`hover:bg-gray-50 focus-within:bg-gray-50 ${cursor===i ? 'bg-gray-50' : ''}`}>
+                    <td className="truncate px-3 py-2 text-gray-900">{d.id}</td>
+                    <td className="px-3 py-2 text-gray-700">{(d.sizeBytes/1024).toFixed(1)} KB</td>
+                    <td className="px-3 py-2 text-gray-700">{new Date(d.createdAt).toLocaleDateString()}</td>
+                    <td className="px-3 py-2 text-gray-700">—</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
