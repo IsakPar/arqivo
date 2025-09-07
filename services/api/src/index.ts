@@ -23,12 +23,14 @@ import { query } from './db.js';
 import { randomUUID } from 'node:crypto';
 import { stripeWebhookRoute } from './routes/stripeWebhook.js';
 import { runMigrations } from './migrate.js';
+import { startWorkers } from './queues.js';
 
 loadEnv();
 
 async function start() {
   // Ensure DB is migrated before serving
   try { await runMigrations(); } catch (e) { console.error('migrate failed', e); }
+  try { startWorkers(); } catch (e) { console.error('queue workers failed', e); }
   // OpenTelemetry (guarded)
   let sdk: NodeSDK | null = null;
   if ((env.ENABLE_OTEL || '').toLowerCase() === 'true') {

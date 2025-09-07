@@ -24,6 +24,12 @@ const envSchema = z.object({
   ENABLE_OTEL: z.string().optional(),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional(),
   OTEL_SERVICE_NAME: z.string().optional(),
+  QUEUE_MAX_DEPTH: z.string().optional(),
+  EXTRACT_CONCURRENCY: z.string().optional(),
+  WEBHOOK_CONCURRENCY: z.string().optional(),
+  CLEANUP_CONCURRENCY: z.string().optional(),
+  BYTES_CAPACITY: z.string().optional(),
+  BYTES_REFILL_PER_SEC: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -50,4 +56,10 @@ export const env = envSchema.parse({
   ENABLE_OTEL: process.env.ENABLE_OTEL,
   OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
   OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
+  QUEUE_MAX_DEPTH: process.env.QUEUE_MAX_DEPTH,
+  EXTRACT_CONCURRENCY: process.env.EXTRACT_CONCURRENCY,
+  WEBHOOK_CONCURRENCY: process.env.WEBHOOK_CONCURRENCY,
+  CLEANUP_CONCURRENCY: process.env.CLEANUP_CONCURRENCY,
+  BYTES_CAPACITY: process.env.BYTES_CAPACITY,
+  BYTES_REFILL_PER_SEC: process.env.BYTES_REFILL_PER_SEC,
 });

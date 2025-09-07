@@ -6,6 +6,7 @@ import { addBytes, addDoc } from './quota.js';
 import { query } from '../db.js';
 import { sendError } from '../error.js';
 import { env } from '../env.js';
+import { cleanupQueue, defaultJobOpts, getQueueDepthLimit } from '../queues.js';
 
 const putBlobSchema = z.object({
   region: z.enum(['us','eu']).default('us'),
@@ -32,6 +33,14 @@ export async function storageRoutes(app: FastifyInstance) {
     if (current >= limit) {
       return { ok: false, code: 'rate_limited' } as any;
     }
+    // backpressure: simple queue depth guard
+    try {
+      const counts = await cleanupQueue.getJobCounts('waiting', 'active', 'delayed');
+      const depth = (counts.waiting || 0) + (counts.active || 0) + (counts.delayed || 0);
+      if (depth > getQueueDepthLimit()) {
+        return { ok: false, code: 'rate_limited' } as any;
+      }
+    } catch {}
     inflight.set(accountId, current + 1);
     try {
       const res = await fn();
@@ -108,6 +117,8 @@ export async function storageRoutes(app: FastifyInstance) {
           [computedId, accountId, region, body.byteLength, computedId]
         );
       } catch {}
+      // Enqueue cleanup safeguard for tmp keys (best-effort)
+      try { await cleanupQueue.add('sweep', { accountId, region }, defaultJobOpts()); } catch {}
       return { ok: true, id: computedId };
     });
     if ((maybeLimited as any)?.ok === false && (maybeLimited as any)?.code === 'rate_limited') {
