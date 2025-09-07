@@ -2,7 +2,10 @@ import { Pool } from 'pg';
 import { config as loadEnv } from 'dotenv';
 loadEnv();
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgres://user:pass@localhost:5432/arqivo';
+const defaultUrl = process.env.NODE_ENV === 'test'
+  ? 'postgres://postgres:postgres@localhost:5433/arqivo'
+  : 'postgres://user:pass@localhost:5432/arqivo';
+const DATABASE_URL = process.env.DATABASE_URL || defaultUrl;
 
 export const pool = new Pool({ connectionString: DATABASE_URL });
 
