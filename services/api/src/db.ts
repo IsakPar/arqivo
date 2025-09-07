@@ -3,7 +3,7 @@ import { config as loadEnv } from 'dotenv';
 loadEnv();
 
 const defaultUrl = process.env.NODE_ENV === 'test'
-  ? 'postgres://postgres:postgres@localhost:5433/arqivo'
+  ? 'postgres://postgres:postgres@localhost:5432/arqivo'
   : 'postgres://user:pass@localhost:5432/arqivo';
 const DATABASE_URL = process.env.DATABASE_URL || defaultUrl;
 
