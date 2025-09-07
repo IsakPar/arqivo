@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { addBytes, addDoc } from './quota.js';
 import { query } from '../db.js';
 import { sendError } from '../error.js';
+import { env } from '../env.js';
 
 const putBlobSchema = z.object({
   region: z.enum(['us','eu']).default('us'),
@@ -13,6 +14,33 @@ const putBlobSchema = z.object({
 
 export async function storageRoutes(app: FastifyInstance) {
   const storage = new StorageService();
+
+  // In-flight upload counters per account for simple concurrency control
+  const inflight = new Map<string, number>();
+  function getPlanLimit(plan: string | null | undefined): number {
+    if (!plan || plan === 'free') return 1;
+    if (plan === 'standard') return 3;
+    if (plan === 'pro') return 10;
+    if (plan === 'enterprise') return Number(env.ENTERPRISE_UPLOAD_CONCURRENCY ?? 20);
+    return 1;
+  }
+  async function withUploadSlot<T>(accountId: string, fn: () => Promise<T>): Promise<T | { ok: false; code: string }> {
+    const planRow = await query<{ plan: string }>('select plan from billing_subscriptions where account_id=$1', [accountId]);
+    const plan = planRow.rows[0]?.plan || 'free';
+    const limit = getPlanLimit(plan);
+    const current = inflight.get(accountId) || 0;
+    if (current >= limit) {
+      return { ok: false, code: 'rate_limited' } as any;
+    }
+    inflight.set(accountId, current + 1);
+    try {
+      const res = await fn();
+      return res;
+    } finally {
+      const cur = inflight.get(accountId) || 1;
+      inflight.set(accountId, Math.max(0, cur - 1));
+    }
+  }
 
   app.put<{ Params: { id: string } }>('/v1/blobs/:id', async (req, reply) => {
     const region = (req.regionCode || (req.query as any)?.region || 'us') as 'us' | 'eu';
@@ -26,7 +54,9 @@ export async function storageRoutes(app: FastifyInstance) {
       return sendError(reply, 413, 'payload_too_large', req.id as string);
     }
 
-    const body = (await req.body) as Buffer;
+    const accountId = req.accountId as string;
+    const maybeLimited = await withUploadSlot(accountId, async () => {
+      const body = (await req.body) as Buffer;
     // Enforce size cap first (50,000,000 bytes default)
     const max = Number(process.env.MAX_BLOB_BYTES ?? 50_000_000);
     if (body.byteLength > max) {
@@ -44,8 +74,7 @@ export async function storageRoutes(app: FastifyInstance) {
     }
 
     // Per-account keyspace
-    const accountId = req.accountId as string;
-    const key = `r/${region}/${accountId}/blobs/${computedId}`;
+      const key = `r/${region}/${accountId}/blobs/${computedId}`;
 
     // Check if this blob already exists to count docs
     let existed = false;
@@ -64,18 +93,24 @@ export async function storageRoutes(app: FastifyInstance) {
       }
     } catch {}
 
-    await storage.putObject({ region, key, body: new Uint8Array(body) });
-    addBytes(body.byteLength, accountId);
-    if (!existed) addDoc(accountId);
+      await storage.putObject({ region, key, body: new Uint8Array(body) });
+      addBytes(body.byteLength, accountId);
+      if (!existed) addDoc(accountId);
     // Record in documents table (idempotent)
-    try {
-      await query(
-        `insert into documents(doc_id, account_id, region_code, size_bytes, doc_hash) values ($1,$2,$3,$4,$5)
-         on conflict (doc_id) do update set size_bytes=EXCLUDED.size_bytes, doc_hash=EXCLUDED.doc_hash`,
-        [computedId, accountId, region, body.byteLength, computedId]
-      );
-    } catch {}
-    return { ok: true, id: computedId };
+      try {
+        await query(
+          `insert into documents(doc_id, account_id, region_code, size_bytes, doc_hash) values ($1,$2,$3,$4,$5)
+           on conflict (doc_id) do update set size_bytes=EXCLUDED.size_bytes, doc_hash=EXCLUDED.doc_hash`,
+          [computedId, accountId, region, body.byteLength, computedId]
+        );
+      } catch {}
+      return { ok: true, id: computedId };
+    });
+    if ((maybeLimited as any)?.ok === false && (maybeLimited as any)?.code === 'rate_limited') {
+      reply.header('Retry-After', '1');
+      return reply.code(429).send({ ok: false, code: 'rate_limited' });
+    }
+    return maybeLimited as any;
   });
 
   // Multipart upload (v0 minimal): init, part, complete

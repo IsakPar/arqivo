@@ -14,7 +14,24 @@ export function AppShell({ children }: Props) {
   const [uploading, setUploading] = React.useState(false);
   const [uploadTotal, setUploadTotal] = React.useState(0);
   const [uploadDone, setUploadDone] = React.useState(0);
-  const MAX_FILES_PER_BATCH = 10;
+  const [maxPerBatch, setMaxPerBatch] = React.useState<number>(1);
+  // Fetch plan and set client-side batch limit
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const token = await getToken?.();
+        const res = await fetch((process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001') + '/v1/billing/status', { headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+        const data = await res.json().catch(() => ({}));
+        const plan = (data?.plan as string) || 'free';
+        if (plan === 'free') setMaxPerBatch(1);
+        else if (plan === 'standard') setMaxPerBatch(3);
+        else if (plan === 'pro') setMaxPerBatch(10);
+        else setMaxPerBatch(20);
+      } catch {
+        setMaxPerBatch(1);
+      }
+    })();
+  }, [getToken]);
 
   React.useEffect(() => {
     try { const v = localStorage.getItem('ws_sidebar'); if (v) setSidebarOpen(v === '1'); } catch {}
@@ -32,7 +49,7 @@ export function AppShell({ children }: Props) {
 
   async function uploadFiles(files: FileList | File[]) {
     const arr = Array.from(files);
-    const slice = arr.slice(0, MAX_FILES_PER_BATCH);
+    const slice = arr.slice(0, maxPerBatch);
     setUploading(true);
     setUploadTotal(slice.length);
     setUploadDone(0);
