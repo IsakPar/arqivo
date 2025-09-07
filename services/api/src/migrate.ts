@@ -54,6 +54,13 @@ export async function runMigrations() {
     );
   `);
 
+  // Performance indexes
+  await query(`
+    create index if not exists documents_account_created_at on documents(account_id, created_at desc);
+    create index if not exists audit_logs_ts on audit_logs(ts);
+    create index if not exists billing_subscriptions_account on billing_subscriptions(account_id);
+  `);
+
   // Enable RLS and basic policies
   await query(`
     alter table if exists accounts enable row level security;

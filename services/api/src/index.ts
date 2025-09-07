@@ -104,6 +104,8 @@ async function start() {
   // Request-id header & rate limiting
   const CAP = Number(process.env.RATE_CAPACITY ?? 100);
   const REFILL = Number(process.env.RATE_REFILL ?? 50);
+  const BYTES_CAP = Number(process.env.BYTES_CAPACITY ?? 5_000_000);
+  const BYTES_REFILL = Number(process.env.BYTES_REFILL_PER_SEC ?? 500_000);
   const redisUrl = env.REDIS_URL;
   let limiterReady = false;
   let redis: any = null;
@@ -159,6 +161,22 @@ tokens=tokens-1; redis.call('HMSET', key,'t',t,'tokens',tokens); redis.call('EXP
       }
       b.tokens -= 1;
       memoryBuckets.set(acct, b);
+    }
+    // Bytes-per-second token bucket (coarse)
+    const bytesNow = Number(req.headers['content-length'] || 0);
+    if (!Number.isNaN(bytesNow) && bytesNow > 0) {
+      const key = `bytes:${acct}`;
+      const meta = (server as any)._bytesMeta || ((server as any)._bytesMeta = new Map());
+      const cur = meta.get(key) || { t: Date.now() / 1000, tokens: BYTES_CAP };
+      const n = Date.now() / 1000;
+      cur.tokens = Math.min(BYTES_CAP, cur.tokens + (n - cur.t) * BYTES_REFILL);
+      cur.t = n;
+      if (cur.tokens - bytesNow < 0) {
+        reply.header('Retry-After', '1').code(429).send({ ok: false, code: 'rate_limited' });
+        return;
+      }
+      cur.tokens -= bytesNow;
+      meta.set(key, cur);
     }
   });
   // Audit log and metrics on response
