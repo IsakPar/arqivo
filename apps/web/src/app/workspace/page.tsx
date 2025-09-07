@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { deleteDocument, getBlob, listDocuments } from '../../lib/api';
 import { aesGcmDecrypt, getOrCreateVaultKey } from '../../lib/crypto';
 import { useAuth } from '@clerk/nextjs';
@@ -18,12 +18,11 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(false);
   const { getToken } = useAuth();
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const token = await getToken?.();
       let list = await listDocuments(token || undefined);
-      // Sorting
       list = list.sort((a, b) => {
         if (sort.key === 'name') return sort.dir === 'asc' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
         if (sort.key === 'size') return sort.dir === 'asc' ? a.sizeBytes - b.sizeBytes : b.sizeBytes - a.sizeBytes;
@@ -35,14 +34,14 @@ export default function WorkspacePage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [getToken, sort.key, sort.dir]);
 
-  useEffect(() => { try { localStorage.setItem('ws_sort', JSON.stringify(sort)); } catch {} ; void refresh(); }, [sort]);
+  useEffect(() => { try { localStorage.setItem('ws_sort', JSON.stringify(sort)); } catch {} ; void refresh(); }, [sort, refresh]);
   useEffect(() => {
     function onReq() { void refresh(); }
     window.addEventListener('arqivo:refresh-docs', onReq as any);
     return () => window.removeEventListener('arqivo:refresh-docs', onReq as any);
-  }, []);
+  }, [refresh]);
 
   async function onDownload(id: string, region: 'us'|'eu') {
     const token = await getToken?.();
