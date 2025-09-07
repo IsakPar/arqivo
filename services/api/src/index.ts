@@ -7,7 +7,6 @@ import { DiagConsoleLogger, DiagLogLevel, diag } from '@opentelemetry/api';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { env } from './env.js';
-import { env } from './env.js';
 import cors from '@fastify/cors';
 import { authRoutes } from './routes/auth.js';
 import { deviceRoutes } from './routes/devices.js';

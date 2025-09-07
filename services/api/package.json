@@ -32,6 +32,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.62.2",
+    "@opentelemetry/sdk-node": "^0.204.0",
     "@sentry/node": "^10.10.0",
     "@types/node": "^20.11.30",
     "@types/pg": "^8.10.6",
