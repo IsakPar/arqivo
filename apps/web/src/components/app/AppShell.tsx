@@ -4,6 +4,9 @@ import React from 'react';
 import { useCommandPalette } from './CommandPalette';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
+import { OcrManager, type OcrResult } from '../../lib/ocr';
+import { LocalDb } from '../../lib/localdb';
+import { extractFromText } from '../../lib/extract';
 import { Inbox } from './Inbox';
 
 type Props = { children: React.ReactNode };
@@ -64,6 +67,26 @@ export function AppShell({ children }: Props) {
 
   type Task = { name: string; progress: number; done: boolean; aborter: AbortController };
   const [tasks, setTasks] = React.useState<Task[]>([]);
+  const searchRef = React.useRef<HTMLInputElement | null>(null);
+
+  // OCR manager (runs on-device)
+  const ocr = React.useMemo(() => new OcrManager({
+    concurrency: 1,
+    onProgress: (p) => {
+      // Could surface granular progress in future
+    },
+    onDone: (r: OcrResult) => {
+      try {
+        const fields = extractFromText(r.text);
+        window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: {
+          title: 'Indexed locally',
+          body: `Extracted ${fields.vendor || 'document'} • ${fields.total ? fields.total : ''} ${fields.currency || ''}`,
+          ts: Date.now(),
+          fields,
+        }}));
+      } catch {}
+    },
+  }), []);
 
   async function uploadFiles(files: FileList | File[]) {
     const arr = Array.from(files);
@@ -76,16 +99,19 @@ export function AppShell({ children }: Props) {
       const token = await getToken?.();
       for (let i = 0; i < slice.length; i++) {
         const idx = i;
-        await encryptAndUploadFile(slice[i], 'us', token || undefined, (p, phase) => {
+        await encryptAndUploadFile(slice[i], 'us', token || undefined, async (p, phase) => {
           setTasks((prev) => {
             const next = [...prev];
             next[idx] = { ...next[idx], progress: p, done: p >= 1 };
             return next;
           });
-          if (p >= 1) {
+          if (phase === 'done' || p >= 1) {
+            // Save minimal local encrypted metadata
             try {
-              window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: { title: 'Document indexed', body: `Extracted fields for ${slice[i].name}. Suggest reminders for expiry/payment.`, ts: Date.now() } }));
+              await LocalDb.putDocument({ id: slice[i].name, name: slice[i].name, sizeBytes: slice[i].size, createdAt: new Date().toISOString(), tags: [] });
             } catch {}
+            // Enqueue OCR (best-effort; runs locally)
+            try { ocr.enqueue({ id: slice[i].name, file: slice[i] }); } catch {}
           }
         }, tasks[idx].aborter);
         setUploadDone(i + 1);
@@ -134,6 +160,7 @@ export function AppShell({ children }: Props) {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); setInboxOpen(o => !o); }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') { e.preventDefault(); setViewMode(v => (v === 'list' ? 'tree' : 'list')); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); searchRef.current?.focus(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -153,6 +180,11 @@ export function AppShell({ children }: Props) {
             aria-label="Search"
             placeholder="Search workspace"
             className="w-full rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
+            ref={searchRef}
+            onChange={(e) => {
+              const q = e.target.value || '';
+              try { window.dispatchEvent(new CustomEvent('arqivo:search', { detail: { q } })); } catch {}
+            }}
           />
         </div>
         <div className="ml-3 flex items-center gap-3">

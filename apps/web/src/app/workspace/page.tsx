@@ -4,6 +4,7 @@ import { deleteDocument, getBlob, listDocuments } from '../../lib/api';
 import { aesGcmDecrypt, getOrCreateVaultKey } from '../../lib/crypto';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
+import { LocalDb } from '../../lib/localdb';
 
 export default function WorkspacePage() {
   const [docs, setDocs] = useState<Array<{ id: string; sizeBytes: number; region: 'us'|'eu'; createdAt: string }>>([]);
@@ -83,6 +84,28 @@ export default function WorkspacePage() {
     try { window.dispatchEvent(new CustomEvent('arqivo:view', { detail: next })); } catch {}
   }
 
+  // Local search: maintain query and filter docs by LocalDb metadata (best-effort)
+  const [q, setQ] = useState('');
+  const [localIds, setLocalIds] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const keys = await LocalDb.listDocuments();
+        if (!cancelled) setLocalIds(keys);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  useEffect(() => {
+    function onSearch(e: any) {
+      const nq = String(e?.detail?.q || '');
+      setQ(nq);
+    }
+    window.addEventListener('arqivo:search', onSearch as any);
+    return () => window.removeEventListener('arqivo:search', onSearch as any);
+  }, []);
+
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <section>
@@ -129,7 +152,16 @@ export default function WorkspacePage() {
           <div className="mt-4 overflow-hidden rounded-lg border border-gray-100">
             {/* Tree scaffold: group by Year -> Month */}
             {Object.entries(
-              docs.reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
+              docs
+              // apply naive filter: if query present, include items whose id or local meta id matches q
+              .filter((d) => {
+                if (!q) return true;
+                const s = q.toLowerCase();
+                if (d.id.toLowerCase().includes(s)) return true;
+                // if we have a local doc id that matches the file name, treat as match
+                return localIds.some((k) => k.toLowerCase().includes(s));
+              })
+              .reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
                 const dt = new Date(d.createdAt);
                 const y = String(dt.getFullYear());
                 const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -180,7 +212,14 @@ export default function WorkspacePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {docs.map((d, i) => (
+                {docs
+                  .filter((d) => {
+                    if (!q) return true;
+                    const s = q.toLowerCase();
+                    if (d.id.toLowerCase().includes(s)) return true;
+                    return localIds.some((k) => k.toLowerCase().includes(s));
+                  })
+                  .map((d, i) => (
                   <tr key={d.id} className={`hover:bg-gray-50 focus-within:bg-gray-50 ${cursor===i ? 'bg-gray-50' : ''}`}>
                     <td className="truncate px-3 py-2 text-gray-900">{d.id}</td>
                     <td className="px-3 py-2 text-gray-700">{(d.sizeBytes/1024).toFixed(1)} KB</td>
