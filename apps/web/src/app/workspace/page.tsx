@@ -87,6 +87,7 @@ export default function WorkspacePage() {
   // Local search: maintain query and filter docs by LocalDb metadata (best-effort)
   const [q, setQ] = useState('');
   const [localIds, setLocalIds] = useState<string[]>([]);
+  const [localFields, setLocalFields] = useState<Record<string, { vendor?: string; tags?: string[] }>>({});
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -97,6 +98,20 @@ export default function WorkspacePage() {
     })();
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const map: Record<string, { vendor?: string; tags?: string[] }> = {};
+        for (const id of localIds.slice(0, 200)) {
+          const f = await LocalDb.getFields<any>(id);
+          if (f) map[id] = { vendor: f.vendor, tags: f.tags };
+        }
+        if (!cancelled) setLocalFields(map);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [localIds]);
   useEffect(() => {
     function onSearch(e: any) {
       const nq = String(e?.detail?.q || '');
@@ -217,11 +232,27 @@ export default function WorkspacePage() {
                     if (!q) return true;
                     const s = q.toLowerCase();
                     if (d.id.toLowerCase().includes(s)) return true;
-                    return localIds.some((k) => k.toLowerCase().includes(s));
+                    if (localIds.some((k) => k.toLowerCase().includes(s))) return true;
+                    const lf = localFields[d.id];
+                    if (lf?.vendor && lf.vendor.toLowerCase().includes(s)) return true;
+                    if (lf?.tags && lf.tags.some(t => t.toLowerCase().includes(s))) return true;
+                    return false;
                   })
                   .map((d, i) => (
                   <tr key={d.id} className={`hover:bg-gray-50 focus-within:bg-gray-50 ${cursor===i ? 'bg-gray-50' : ''}`}>
-                    <td className="truncate px-3 py-2 text-gray-900">{d.id}</td>
+                    <td className="truncate px-3 py-2 text-gray-900">
+                      <div className="truncate">{d.id}</div>
+                      {localFields[d.id]?.vendor && (
+                        <div className="truncate text-xs text-gray-600">{localFields[d.id]?.vendor}</div>
+                      )}
+                      {localFields[d.id]?.tags && localFields[d.id]!.tags!.length > 0 && (
+                        <div className="mt-0.5 flex flex-wrap gap-1">
+                          {localFields[d.id]!.tags!.slice(0, 4).map((t, idx) => (
+                            <span key={idx} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-gray-700">{(d.sizeBytes/1024).toFixed(1)} KB</td>
                     <td className="px-3 py-2 text-gray-700">{new Date(d.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-2 text-gray-700">—</td>

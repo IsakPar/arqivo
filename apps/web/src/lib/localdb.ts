@@ -15,6 +15,10 @@ interface ArqivoDB extends DBSchema {
     key: string; // shardId
     value: Encrypted; // encrypted shard payload
   };
+  fields: {
+    key: string; // docId (content hash)
+    value: Encrypted; // encrypted ExtractedFields
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<ArqivoDB>> | null = null;
@@ -29,6 +33,9 @@ async function getDb(): Promise<IDBPDatabase<ArqivoDB>> {
         }
         if (!database.objectStoreNames.contains('index')) {
           database.createObjectStore('index');
+        }
+        if (!database.objectStoreNames.contains('fields')) {
+          database.createObjectStore('fields');
         }
       },
     });
@@ -115,6 +122,21 @@ export const LocalDb = {
   async deleteIndexShard(shardId: string): Promise<void> {
     const db = await getDb();
     await db.delete('index', shardId);
+  },
+
+  // Extracted fields (encrypted)
+  async putFields(docId: string, json: unknown): Promise<void> {
+    const db = await getDb();
+    const bytes = toBytes(json);
+    const enc = await encrypt(bytes);
+    await db.put('fields', enc, docId);
+  },
+  async getFields<T = unknown>(docId: string): Promise<T | null> {
+    const db = await getDb();
+    const enc = await db.get('fields', docId);
+    if (!enc) return null;
+    const pt = await decrypt(enc);
+    return fromBytes(pt) as T | null;
   },
 };
 

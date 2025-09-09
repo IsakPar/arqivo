@@ -7,6 +7,7 @@ import { encryptAndUploadFile } from '../../lib/workspace';
 import { OcrManager, type OcrResult } from '../../lib/ocr';
 import { LocalDb } from '../../lib/localdb';
 import { extractFromText } from '../../lib/extract';
+import { pdfToText } from '../../lib/pdf';
 import { Inbox } from './Inbox';
 
 type Props = { children: React.ReactNode };
@@ -84,6 +85,8 @@ export function AppShell({ children }: Props) {
           ts: Date.now(),
           fields,
         }}));
+        // Persist fields
+        try { void LocalDb.putFields(r.id, fields); } catch {}
       } catch {}
     },
   }), []);
@@ -111,7 +114,22 @@ export function AppShell({ children }: Props) {
               await LocalDb.putDocument({ id: slice[i].name, name: slice[i].name, sizeBytes: slice[i].size, createdAt: new Date().toISOString(), tags: [] });
             } catch {}
             // Enqueue OCR (best-effort; runs locally)
-            try { ocr.enqueue({ id: slice[i].name, file: slice[i] }); } catch {}
+            try {
+              const file = slice[i];
+              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                // Try text layer first; fall back to OCR
+                try {
+                  const text = await pdfToText(file);
+                  const fields = extractFromText(text);
+                  await LocalDb.putFields(file.name, fields);
+                  window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: { title: 'Parsed PDF', body: `Extracted ${fields.vendor || 'document'}`, ts: Date.now(), fields } }));
+                } catch {
+                  ocr.enqueue({ id: file.name, file });
+                }
+              } else {
+                ocr.enqueue({ id: file.name, file });
+              }
+            } catch {}
           }
         }, tasks[idx].aborter);
         setUploadDone(i + 1);
