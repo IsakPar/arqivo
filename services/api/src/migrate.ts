@@ -1,6 +1,6 @@
 import { query } from './db.js';
 
-export async function runMigrations() {
+async function main() {
   await query(`
     create table if not exists accounts (
       account_id uuid primary key,
@@ -53,70 +53,7 @@ export async function runMigrations() {
       updated_at timestamptz not null default now()
     );
   `);
-
-  // Performance indexes
-  await query(`
-    create index if not exists documents_account_created_at on documents(account_id, created_at desc);
-    create index if not exists audit_logs_ts on audit_logs(ts);
-    create index if not exists billing_subscriptions_account on billing_subscriptions(account_id);
-  `);
-
-  // Enable RLS and basic policies
-  await query(`
-    alter table if exists accounts enable row level security;
-    alter table if exists devices enable row level security;
-    alter table if exists documents enable row level security;
-    alter table if exists audit_logs enable row level security;
-    alter table if exists quotas enable row level security;
-    alter table if exists billing_customers enable row level security;
-    alter table if exists billing_subscriptions enable row level security;
-
-    -- helper to store current account id in session
-    do $$ begin
-      create or replace function set_app_account(a uuid) returns void as $$
-      begin
-        perform set_config('app.account_id', a::text, true);
-      end;$$ language plpgsql;
-    exception when others then null; end $$;
-
-    -- policies: allow owner, block others
-    -- documents
-    do $$ begin
-      create policy documents_owner on documents using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
-    exception when others then null; end $$;
-
-    -- quotas
-    do $$ begin
-      create policy quotas_owner on quotas using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
-    exception when others then null; end $$;
-
-    -- devices
-    do $$ begin
-      create policy devices_owner on devices using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
-    exception when others then null; end $$;
-
-    -- billing tables
-    do $$ begin
-      create policy billing_customers_owner on billing_customers using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
-    exception when others then null; end $$;
-    do $$ begin
-      create policy billing_subscriptions_owner on billing_subscriptions using (account_id::text = current_setting('app.account_id', true)) with check (account_id::text = current_setting('app.account_id', true));
-    exception when others then null; end $$;
-
-    -- audit logs: allow insert/select for any (non-sensitive) for now
-    do $$ begin
-      create policy audit_any on audit_logs using (true) with check (true);
-    exception when others then null; end $$;
-
-    -- accounts: temporarily allow any; tighten later with service role or dedicated view
-    do $$ begin
-      create policy accounts_any on accounts using (true) with check (true);
-    exception when others then null; end $$;
-  `);
   console.log('Migration complete.');
-}
-async function main() {
-  await runMigrations();
 }
 
 main().catch((err) => {

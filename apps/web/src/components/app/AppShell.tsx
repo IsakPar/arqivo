@@ -4,10 +4,6 @@ import React from 'react';
 import { useCommandPalette } from './CommandPalette';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
-import { OcrManager, type OcrResult } from '../../lib/ocr';
-import { LocalDb } from '../../lib/localdb';
-import { extractFromText } from '../../lib/extract';
-import { pdfToText } from '../../lib/pdf';
 import { Inbox } from './Inbox';
 
 type Props = { children: React.ReactNode };
@@ -18,29 +14,7 @@ export function AppShell({ children }: Props) {
   const [uploading, setUploading] = React.useState(false);
   const [uploadTotal, setUploadTotal] = React.useState(0);
   const [uploadDone, setUploadDone] = React.useState(0);
-  const [maxPerBatch, setMaxPerBatch] = React.useState<number>(1);
-  const { getToken } = useAuth();
-  const [viewMode, setViewMode] = React.useState<'list'|'tree'>(() => {
-    try { return (localStorage.getItem('ws_view') as any) || 'list'; } catch { return 'list'; }
-  });
-
-  // Fetch plan and set client-side batch limit
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const token = await getToken?.();
-        const res = await fetch((process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001') + '/v1/billing/status', { headers: { ...(token ? { authorization: `Bearer ${token}` } : {}) } });
-        const data = await res.json().catch(() => ({}));
-        const plan = (data?.plan as string) || 'free';
-        if (plan === 'free') setMaxPerBatch(1);
-        else if (plan === 'standard') setMaxPerBatch(3);
-        else if (plan === 'pro') setMaxPerBatch(10);
-        else setMaxPerBatch(20);
-      } catch {
-        setMaxPerBatch(1);
-      }
-    })();
-  }, [getToken]);
+  const MAX_FILES_PER_BATCH = 10;
 
   React.useEffect(() => {
     try { const v = localStorage.getItem('ws_sidebar'); if (v) setSidebarOpen(v === '1'); } catch {}
@@ -49,51 +23,16 @@ export function AppShell({ children }: Props) {
     try { localStorage.setItem('ws_sidebar', sidebarOpen ? '1' : '0'); } catch {}
   }, [sidebarOpen]);
 
-  // Persist and broadcast view mode changes
-  React.useEffect(() => {
-    try { localStorage.setItem('ws_view', viewMode); } catch {}
-    try { window.dispatchEvent(new CustomEvent('arqivo:view', { detail: viewMode })); } catch {}
-  }, [viewMode]);
-
-  // Keep header in sync if another component updates the view
-  React.useEffect(() => {
-    function onView(e: any) { setViewMode(e?.detail === 'tree' ? 'tree' : 'list'); }
-    window.addEventListener('arqivo:view', onView as any);
-    return () => window.removeEventListener('arqivo:view', onView as any);
-  }, []);
-
   function onDragEnter(e: React.DragEvent) { e.preventDefault(); setDragging(true); }
   function onDragOver(e: React.DragEvent) { e.preventDefault(); }
   function onDragLeave(e: React.DragEvent) { e.preventDefault(); setDragging(false); }
 
   type Task = { name: string; progress: number; done: boolean; aborter: AbortController };
   const [tasks, setTasks] = React.useState<Task[]>([]);
-  const searchRef = React.useRef<HTMLInputElement | null>(null);
-
-  // OCR manager (runs on-device)
-  const ocr = React.useMemo(() => new OcrManager({
-    concurrency: 1,
-    onProgress: (p) => {
-      // Could surface granular progress in future
-    },
-    onDone: (r: OcrResult) => {
-      try {
-        const fields = extractFromText(r.text);
-        window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: {
-          title: 'Indexed locally',
-          body: `Extracted ${fields.vendor || 'document'} • ${fields.total ? fields.total : ''} ${fields.currency || ''}`,
-          ts: Date.now(),
-          fields,
-        }}));
-        // Persist fields
-        try { void LocalDb.putFields(r.id, fields); } catch {}
-      } catch {}
-    },
-  }), []);
 
   async function uploadFiles(files: FileList | File[]) {
     const arr = Array.from(files);
-    const slice = arr.slice(0, maxPerBatch);
+    const slice = arr.slice(0, MAX_FILES_PER_BATCH);
     setUploading(true);
     setUploadTotal(slice.length);
     setUploadDone(0);
@@ -102,33 +41,15 @@ export function AppShell({ children }: Props) {
       const token = await getToken?.();
       for (let i = 0; i < slice.length; i++) {
         const idx = i;
-        await encryptAndUploadFile(slice[i], 'us', token || undefined, async (p, phase) => {
+        await encryptAndUploadFile(slice[i], 'us', token || undefined, (p, phase) => {
           setTasks((prev) => {
             const next = [...prev];
             next[idx] = { ...next[idx], progress: p, done: p >= 1 };
             return next;
           });
-          if (phase === 'done' || p >= 1) {
-            // Save minimal local encrypted metadata
+          if (p >= 1) {
             try {
-              await LocalDb.putDocument({ id: slice[i].name, name: slice[i].name, sizeBytes: slice[i].size, createdAt: new Date().toISOString(), tags: [] });
-            } catch {}
-            // Enqueue OCR (best-effort; runs locally)
-            try {
-              const file = slice[i];
-              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                // Try text layer first; fall back to OCR
-                try {
-                  const text = await pdfToText(file);
-                  const fields = extractFromText(text);
-                  await LocalDb.putFields(file.name, fields);
-                  window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: { title: 'Parsed PDF', body: `Extracted ${fields.vendor || 'document'}`, ts: Date.now(), fields } }));
-                } catch {
-                  ocr.enqueue({ id: file.name, file });
-                }
-              } else {
-                ocr.enqueue({ id: file.name, file });
-              }
+              window.dispatchEvent(new CustomEvent('arqivo:inbox', { detail: { title: 'Document indexed', body: `Extracted fields for ${slice[i].name}. Suggest reminders for expiry/payment.`, ts: Date.now() } }));
             } catch {}
           }
         }, tasks[idx].aborter);
@@ -142,7 +63,7 @@ export function AppShell({ children }: Props) {
     }
   }
 
-  
+  const { getToken } = useAuth();
   const [inboxOpen, setInboxOpen] = React.useState(false);
   const [unread, setUnread] = React.useState(0);
 
@@ -163,9 +84,6 @@ export function AppShell({ children }: Props) {
     }},
     { id: 'settings', label: 'Open Settings', shortcut: '⌘,', run: () => { window.location.href = '/workspace/settings'; }},
     { id: 'inbox', label: 'Open Inbox', shortcut: '⌘I', run: () => { setInboxOpen(true); }},
-    { id: 'toggle-view', label: 'Toggle view (List/Tree)', shortcut: '⌘T', run: () => {
-      setViewMode(v => (v === 'list' ? 'tree' : 'list'));
-    }},
   ]);
 
   async function onHiddenFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -177,8 +95,6 @@ export function AppShell({ children }: Props) {
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); setInboxOpen(o => !o); }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 't') { e.preventDefault(); setViewMode(v => (v === 'list' ? 'tree' : 'list')); }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); searchRef.current?.focus(); }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -198,33 +114,9 @@ export function AppShell({ children }: Props) {
             aria-label="Search"
             placeholder="Search workspace"
             className="w-full rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
-            ref={searchRef}
-            onChange={(e) => {
-              const q = e.target.value || '';
-              try { window.dispatchEvent(new CustomEvent('arqivo:search', { detail: { q } })); } catch {}
-            }}
           />
         </div>
         <div className="ml-3 flex items-center gap-3">
-          {/* View toggle */}
-          <div role="group" aria-label="View mode" className="hidden md:flex items-center gap-1">
-            <button
-              aria-pressed={viewMode==='list'}
-              onClick={() => setViewMode('list')}
-              title="List view (⌘T)"
-              className={`rounded-md border px-2 py-1 text-xs ${viewMode==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}
-            >
-              List
-            </button>
-            <button
-              aria-pressed={viewMode==='tree'}
-              onClick={() => setViewMode('tree')}
-              title="Tree view (⌘T)"
-              className={`rounded-md border px-2 py-1 text-xs ${viewMode==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}
-            >
-              Tree
-            </button>
-          </div>
           <button onClick={() => { setOpen(true); setQ(''); }} className="text-sm text-gray-700 hover:text-gray-900">⌘K</button>
           <input id="ws-hidden-file" type="file" className="hidden" onChange={onHiddenFileChange} />
           <div className="relative">

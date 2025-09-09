@@ -27,7 +27,7 @@ export function Inbox({ open, onClose, onUnreadChange }: Props) {
     }
     window.addEventListener('arqivo:inbox', onNotify as any);
     return () => window.removeEventListener('arqivo:inbox', onNotify as any);
-  }, [onUnreadChange]);
+  }, []);
 
   // Mark all as read when opened
   React.useEffect(() => {
@@ -35,7 +35,7 @@ export function Inbox({ open, onClose, onUnreadChange }: Props) {
       setMessages((prev) => prev.map(m => ({ ...m, read: true })));
       onUnreadChange?.(0);
     }
-  }, [open, messages, onUnreadChange]);
+  }, [open]);
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();

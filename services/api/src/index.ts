@@ -2,10 +2,6 @@ import Fastify from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { config as loadEnv } from 'dotenv';
-import * as Sentry from '@sentry/node';
-import { DiagConsoleLogger, DiagLogLevel, diag } from '@opentelemetry/api';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { env } from './env.js';
 import cors from '@fastify/cors';
 import { authRoutes } from './routes/auth.js';
@@ -22,50 +18,16 @@ import { sendError } from './error.js';
 import { query } from './db.js';
 import { randomUUID } from 'node:crypto';
 import { stripeWebhookRoute } from './routes/stripeWebhook.js';
-import { runMigrations } from './migrate.js';
-import { startWorkers } from './queues.js';
 
 loadEnv();
 
 async function start() {
-  // Ensure DB is migrated before serving
-  try { await runMigrations(); } catch (e) { console.error('migrate failed', e); }
-  try { startWorkers(); } catch (e) { console.error('queue workers failed', e); }
-  // OpenTelemetry (guarded)
-  let sdk: NodeSDK | null = null;
-  if ((env.ENABLE_OTEL || '').toLowerCase() === 'true') {
-    try {
-      diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
-      sdk = new NodeSDK({
-        serviceName: env.OTEL_SERVICE_NAME || 'arqivo-api',
-        traceExporter: undefined, // use OTLP via env if configured
-        instrumentations: [getNodeAutoInstrumentations()],
-      });
-      await sdk.start();
-    } catch {}
-  }
   const server = Fastify({
     logger: {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     },
     bodyLimit: 100 * 1024 * 1024,
   });
-
-  // Sentry (guarded)
-  if (process.env.SENTRY_DSN) {
-    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1) });
-    server.addHook('onError', async (_req, _reply, err) => {
-      try {
-        // scrub headers quickly
-        const e = err as any;
-        if (e && e.headers) {
-          delete e.headers['authorization'];
-          delete e.headers['cookie'];
-        }
-        Sentry.captureException(err);
-      } catch {}
-    });
-  }
 
   await server.register(helmet);
   await server.register(cors, {
@@ -104,8 +66,6 @@ async function start() {
   // Request-id header & rate limiting
   const CAP = Number(process.env.RATE_CAPACITY ?? 100);
   const REFILL = Number(process.env.RATE_REFILL ?? 50);
-  const BYTES_CAP = Number(process.env.BYTES_CAPACITY ?? 5_000_000);
-  const BYTES_REFILL = Number(process.env.BYTES_REFILL_PER_SEC ?? 500_000);
   const redisUrl = env.REDIS_URL;
   let limiterReady = false;
   let redis: any = null;
@@ -161,22 +121,6 @@ tokens=tokens-1; redis.call('HMSET', key,'t',t,'tokens',tokens); redis.call('EXP
       }
       b.tokens -= 1;
       memoryBuckets.set(acct, b);
-    }
-    // Bytes-per-second token bucket (coarse)
-    const bytesNow = Number(req.headers['content-length'] || 0);
-    if (!Number.isNaN(bytesNow) && bytesNow > 0) {
-      const key = `bytes:${acct}`;
-      const meta = (server as any)._bytesMeta || ((server as any)._bytesMeta = new Map());
-      const cur = meta.get(key) || { t: Date.now() / 1000, tokens: BYTES_CAP };
-      const n = Date.now() / 1000;
-      cur.tokens = Math.min(BYTES_CAP, cur.tokens + (n - cur.t) * BYTES_REFILL);
-      cur.t = n;
-      if (cur.tokens - bytesNow < 0) {
-        reply.header('Retry-After', '1').code(429).send({ ok: false, code: 'rate_limited' });
-        return;
-      }
-      cur.tokens -= bytesNow;
-      meta.set(key, cur);
     }
   });
   // Audit log and metrics on response

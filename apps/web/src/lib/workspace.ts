@@ -1,7 +1,8 @@
 'use client';
 
-import { aesGcmEncrypt, sha256Hex, getOrCreateVaultKey } from './crypto';
-import { putBlob, putIndexShard, putMetadata } from './api';
+import { aesGcmEncrypt, sha256Hex, getOrCreateVaultKey, randomBytes } from './crypto';
+import { wrapFileKey } from './keystore';
+import { putBlob, putIndexShard, putMetadata, putWrappedFk } from './api';
 
 export async function fileToBytes(file: File): Promise<Uint8Array> {
   const ab = await file.arrayBuffer();
@@ -17,8 +18,11 @@ export async function encryptAndUploadFile(
 ): Promise<{ id: string }>{
   const bytes = await fileToBytes(file);
   const kv = getOrCreateVaultKey();
+  // Generate per-file key and wrap for future storage (prep for server storage)
+  const fk = randomBytes(32);
+  const wrappedFk = await wrapFileKey(fk);
   onProgress?.(0.1, 'encrypt');
-  const { packed } = await aesGcmEncrypt(kv, bytes);
+  const { packed } = await aesGcmEncrypt(fk, bytes);
   const id = await sha256Hex(packed);
   onProgress?.(0.4, 'blob');
   await putBlob(id, region, packed, token, aborter?.signal);
@@ -30,15 +34,16 @@ export async function encryptAndUploadFile(
     tags: [],
   } as const;
   const metaBytes = new TextEncoder().encode(JSON.stringify(meta));
-  const encMeta = await aesGcmEncrypt(kv, metaBytes);
+  const encMeta = await aesGcmEncrypt(fk, metaBytes);
   onProgress?.(0.7, 'metadata');
   await putMetadata(id, region, encMeta.packed, token, aborter?.signal);
 
   const shardId = `shard_${id}`;
   const indexPayload = new TextEncoder().encode(JSON.stringify({ schema_version: 1, shard_id: shardId, ids: [id], vectors: [1,0,0,0] }));
-  const encIndex = await aesGcmEncrypt(kv, indexPayload);
+  const encIndex = await aesGcmEncrypt(fk, indexPayload);
   onProgress?.(0.9, 'index');
   await putIndexShard(shardId, region, encIndex.packed, token, aborter?.signal);
+  try { await putWrappedFk(id, toHex(wrappedFk), token); } catch {}
   onProgress?.(1, 'done');
 
   return { id };

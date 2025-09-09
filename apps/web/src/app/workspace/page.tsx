@@ -1,10 +1,9 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { deleteDocument, getBlob, listDocuments } from '../../lib/api';
 import { aesGcmDecrypt, getOrCreateVaultKey } from '../../lib/crypto';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
-import { LocalDb } from '../../lib/localdb';
 
 export default function WorkspacePage() {
   const [docs, setDocs] = useState<Array<{ id: string; sizeBytes: number; region: 'us'|'eu'; createdAt: string }>>([]);
@@ -19,11 +18,12 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(false);
   const { getToken } = useAuth();
 
-  const refresh = useCallback(async () => {
+  async function refresh() {
     setLoading(true);
     try {
       const token = await getToken?.();
       let list = await listDocuments(token || undefined);
+      // Sorting
       list = list.sort((a, b) => {
         if (sort.key === 'name') return sort.dir === 'asc' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
         if (sort.key === 'size') return sort.dir === 'asc' ? a.sizeBytes - b.sizeBytes : b.sizeBytes - a.sizeBytes;
@@ -35,14 +35,14 @@ export default function WorkspacePage() {
     } finally {
       setLoading(false);
     }
-  }, [getToken, sort.key, sort.dir]);
+  }
 
-  useEffect(() => { try { localStorage.setItem('ws_sort', JSON.stringify(sort)); } catch {} ; void refresh(); }, [sort, refresh]);
+  useEffect(() => { try { localStorage.setItem('ws_sort', JSON.stringify(sort)); } catch {} ; void refresh(); }, [sort]);
   useEffect(() => {
     function onReq() { void refresh(); }
     window.addEventListener('arqivo:refresh-docs', onReq as any);
     return () => window.removeEventListener('arqivo:refresh-docs', onReq as any);
-  }, [refresh]);
+  }, []);
 
   async function onDownload(id: string, region: 'us'|'eu') {
     const token = await getToken?.();
@@ -69,67 +69,14 @@ export default function WorkspacePage() {
   });
   useEffect(() => { try { localStorage.setItem('ws_view', view); } catch {} }, [view]);
 
-  // Sync with global header view toggle
-  useEffect(() => {
-    function onView(e: any) {
-      const next = e?.detail === 'tree' ? 'tree' : 'list';
-      setView(next);
-    }
-    window.addEventListener('arqivo:view', onView as any);
-    return () => window.removeEventListener('arqivo:view', onView as any);
-  }, []);
-
-  function setViewAndEmit(next: 'list'|'tree') {
-    setView(next);
-    try { window.dispatchEvent(new CustomEvent('arqivo:view', { detail: next })); } catch {}
-  }
-
-  // Local search: maintain query and filter docs by LocalDb metadata (best-effort)
-  const [q, setQ] = useState('');
-  const [localIds, setLocalIds] = useState<string[]>([]);
-  const [localFields, setLocalFields] = useState<Record<string, { vendor?: string; tags?: string[] }>>({});
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const keys = await LocalDb.listDocuments();
-        if (!cancelled) setLocalIds(keys);
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, []);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const map: Record<string, { vendor?: string; tags?: string[] }> = {};
-        for (const id of localIds.slice(0, 200)) {
-          const f = await LocalDb.getFields<any>(id);
-          if (f) map[id] = { vendor: f.vendor, tags: f.tags };
-        }
-        if (!cancelled) setLocalFields(map);
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [localIds]);
-  useEffect(() => {
-    function onSearch(e: any) {
-      const nq = String(e?.detail?.q || '');
-      setQ(nq);
-    }
-    window.addEventListener('arqivo:search', onSearch as any);
-    return () => window.removeEventListener('arqivo:search', onSearch as any);
-  }, []);
-
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6">
       <section>
         <div className="flex items-center justify-between">
           <h1 className="sr-only">Files</h1>
           <div className="ml-auto flex items-center gap-2">
-            {/* Mobile view toggle (header has desktop toggle) */}
-            <button onClick={() => setViewAndEmit('list')} className={`md:hidden rounded-md border px-2 py-1 text-xs ${view==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>List</button>
-            <button onClick={() => setViewAndEmit('tree')} className={`md:hidden rounded-md border px-2 py-1 text-xs ${view==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>Tree</button>
+            <button onClick={() => setView('list')} className={`rounded-md border px-2 py-1 text-xs ${view==='list' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>List</button>
+            <button onClick={() => setView('tree')} className={`rounded-md border px-2 py-1 text-xs ${view==='tree' ? 'border-gray-900 text-gray-900' : 'border-gray-200 text-gray-700'}`}>Tree</button>
           </div>
         </div>
         {/* Empty state when no docs */}
@@ -167,16 +114,7 @@ export default function WorkspacePage() {
           <div className="mt-4 overflow-hidden rounded-lg border border-gray-100">
             {/* Tree scaffold: group by Year -> Month */}
             {Object.entries(
-              docs
-              // apply naive filter: if query present, include items whose id or local meta id matches q
-              .filter((d) => {
-                if (!q) return true;
-                const s = q.toLowerCase();
-                if (d.id.toLowerCase().includes(s)) return true;
-                // if we have a local doc id that matches the file name, treat as match
-                return localIds.some((k) => k.toLowerCase().includes(s));
-              })
-              .reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
+              docs.reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
                 const dt = new Date(d.createdAt);
                 const y = String(dt.getFullYear());
                 const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -227,32 +165,9 @@ export default function WorkspacePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
-                {docs
-                  .filter((d) => {
-                    if (!q) return true;
-                    const s = q.toLowerCase();
-                    if (d.id.toLowerCase().includes(s)) return true;
-                    if (localIds.some((k) => k.toLowerCase().includes(s))) return true;
-                    const lf = localFields[d.id];
-                    if (lf?.vendor && lf.vendor.toLowerCase().includes(s)) return true;
-                    if (lf?.tags && lf.tags.some(t => t.toLowerCase().includes(s))) return true;
-                    return false;
-                  })
-                  .map((d, i) => (
+                {docs.map((d, i) => (
                   <tr key={d.id} className={`hover:bg-gray-50 focus-within:bg-gray-50 ${cursor===i ? 'bg-gray-50' : ''}`}>
-                    <td className="truncate px-3 py-2 text-gray-900">
-                      <div className="truncate">{d.id}</div>
-                      {localFields[d.id]?.vendor && (
-                        <div className="truncate text-xs text-gray-600">{localFields[d.id]?.vendor}</div>
-                      )}
-                      {localFields[d.id]?.tags && localFields[d.id]!.tags!.length > 0 && (
-                        <div className="mt-0.5 flex flex-wrap gap-1">
-                          {localFields[d.id]!.tags!.slice(0, 4).map((t, idx) => (
-                            <span key={idx} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">{t}</span>
-                          ))}
-                        </div>
-                      )}
-                    </td>
+                    <td className="truncate px-3 py-2 text-gray-900">{d.id}</td>
                     <td className="px-3 py-2 text-gray-700">{(d.sizeBytes/1024).toFixed(1)} KB</td>
                     <td className="px-3 py-2 text-gray-700">{new Date(d.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-2 text-gray-700">—</td>
