@@ -151,13 +151,16 @@ export function AppShell({ children }: Props) {
         onOpenInbox={() => setInboxOpen(true)}
         unread={unread}
         onOpenSettings={() => setSettingsOpen(true)}
+        searchValue={searchQuery}
+        onSearchChange={(v) => setSearchQuery(v)}
+        onSearchFocus={() => { setSearchOpen(true); }}
       />
 
       {/* Body: left rail, contextual sidebar, main content */}
       <div className={`grid w-full gap-0`} style={{ gridTemplateColumns: `${sidebarOpen ? 'minmax(0,240px)' : 'minmax(0,0px)'} minmax(0,1fr)` }}>
 
         {/* Contextual sidebar */}
-        <Sidebar open={sidebarOpen} />
+        <Sidebar open={sidebarOpen} onSelect={() => { /* no-op placeholder */ }} />
 
         {/* Main content */}
         <section aria-label="Content" className="relative min-h-[calc(100vh-48px)] min-w-0 bg-white px-4 py-6" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) void uploadFiles(e.dataTransfer.files); }}>

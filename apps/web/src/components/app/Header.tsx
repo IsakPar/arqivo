@@ -8,9 +8,12 @@ type Props = {
   onOpenInbox: () => void;
   unread: number;
   onOpenSettings: () => void;
+  searchValue: string;
+  onSearchChange: (v: string) => void;
+  onSearchFocus: () => void;
 };
 
-export function Header({ onOpenCommand, onUploadClick, onOpenInbox, unread, onOpenSettings }: Props) {
+export function Header({ onOpenCommand, onUploadClick, onOpenInbox, unread, onOpenSettings, searchValue, onSearchChange, onSearchFocus }: Props) {
   return (
     <header className="z-40 flex h-12 items-center gap-3 border-b border-gray-100 bg-white/80 px-3 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="flex items-center gap-2">
@@ -22,6 +25,9 @@ export function Header({ onOpenCommand, onUploadClick, onOpenInbox, unread, onOp
         <input
           aria-label="Search"
           placeholder="Search workspace"
+          value={searchValue}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onFocus={onSearchFocus}
           className="w-full rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
         />
       </div>
