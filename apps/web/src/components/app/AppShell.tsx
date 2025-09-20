@@ -10,6 +10,8 @@ import { useHotkeys } from '../../hooks/useHotkeys';
 import { searchIndex, indexFileName } from '../../lib/localdb';
 import { CmdFOverlay } from './CmdFOverlay';
 import { UploadTaskbar } from './UploadTaskbar';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
 
 type Props = { children: React.ReactNode };
 
@@ -143,49 +145,19 @@ export function AppShell({ children }: Props) {
 
   return (
     <div className="min-h-screen grid grid-rows-[auto,1fr] bg-white" onDragEnter={onDragEnter}>
-      {/* Global header */}
-      <header className="z-40 flex h-12 items-center gap-3 border-b border-gray-100 bg-white/80 px-3 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded bg-gray-900" aria-hidden />
-          <span className="text-sm font-semibold text-gray-900">Arqivo</span>
-        </div>
-        <div className="mx-3 h-5 w-px bg-gray-200" aria-hidden />
-        <div className="flex-1">
-          <input
-            aria-label="Search"
-            placeholder="Search workspace"
-            className="w-full rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm outline-none ring-0 placeholder:text-gray-400 focus:border-gray-300"
-          />
-        </div>
-        <div className="ml-3 flex items-center gap-3">
-          <button onClick={() => { setOpen(true); setQ(''); }} className="text-sm text-gray-700 hover:text-gray-900">⌘K</button>
-          <input id="ws-hidden-file" type="file" className="hidden" onChange={onHiddenFileChange} />
-          <div className="relative">
-            <button aria-label="Inbox" onClick={() => setInboxOpen(true)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5 7h14"></path><path d="M5 17h14"></path><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-            </button>
-            {/* Unread badge */}
-            {unread > 0 && <span className="absolute -right-1 -top-1 grid h-3.5 w-3.5 place-items-center rounded-full bg-[#f1998d] text-[9px] font-semibold text-white">{unread > 9 ? '9+' : unread}</span>}
-          </div>
-          <button aria-label="Settings" onClick={() => setSettingsOpen(true)} className="grid h-7 w-7 place-items-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15a1.65 1.65 0 0 0-1.51-1H2a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 3.6 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 3.6a1.65 1.65 0 0 0 1-1.51V2a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 3.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.4 8c0 .23.03.45.09.67A1.65 1.65 0 0 0 22 10h0a2 2 0 1 1 0 4h0a1.65 1.65 0 0 0-1.6 1z"/></svg>
-          </button>
-        </div>
-      </header>
+      <Header
+        onOpenCommand={() => { setOpen(true); setQ(''); }}
+        onUploadClick={onHiddenFileChange}
+        onOpenInbox={() => setInboxOpen(true)}
+        unread={unread}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
       {/* Body: left rail, contextual sidebar, main content */}
       <div className={`grid w-full gap-0`} style={{ gridTemplateColumns: `${sidebarOpen ? 'minmax(0,240px)' : 'minmax(0,0px)'} minmax(0,1fr)` }}>
 
         {/* Contextual sidebar */}
-        <aside aria-label="Sidebar" className={`sticky top-12 ${sidebarOpen ? 'md:flex' : 'md:hidden'} hidden h-[calc(100vh-48px)] flex-col border-r border-gray-100 bg-white/60 p-3`}>
-          <div className="text-xs font-medium text-gray-700">Files</div>
-          <div className="mt-3 space-y-1 text-sm">
-            <button className="w-full rounded-md px-2 py-1.5 text-left text-gray-800 hover:bg-gray-100">All documents</button>
-            <button className="w-full rounded-md px-2 py-1.5 text-left text-gray-800 hover:bg-gray-100">Recents</button>
-            <button className="w-full rounded-md px-2 py-1.5 text-left text-gray-800 hover:bg-gray-100">Shared with me</button>
-          </div>
-          <div className="mt-auto rounded-md border border-gray-100 p-2 text-xs text-gray-600">Storage: coming soon</div>
-        </aside>
+        <Sidebar open={sidebarOpen} />
 
         {/* Main content */}
         <section aria-label="Content" className="relative min-h-[calc(100vh-48px)] min-w-0 bg-white px-4 py-6" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={(e) => { e.preventDefault(); if (e.dataTransfer?.files?.length) void uploadFiles(e.dataTransfer.files); }}>
