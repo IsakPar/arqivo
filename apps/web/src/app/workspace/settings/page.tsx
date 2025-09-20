@@ -63,7 +63,35 @@ export default function SettingsPage() {
           {tab === 'billing' && (
             <div className="text-sm text-gray-800">
               <div className="font-medium text-gray-900">Billing</div>
-              <p className="mt-1 text-xs text-gray-600">Plan, payment method, invoices, usage. Coming soon.</p>
+              <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-md border border-gray-100 p-3">
+                  <div className="text-xs font-medium text-gray-900">Current plan</div>
+                  <div className="mt-1 text-xs text-gray-600">Starter (mock) — 5 GB, 1 workspace, basic OCR</div>
+                  <div className="mt-2">
+                    <button className="rounded border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50">Change plan</button>
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-100 p-3">
+                  <div className="text-xs font-medium text-gray-900">Payment method</div>
+                  <div className="mt-1 text-xs text-gray-600">Visa •••• 4242 (mock)</div>
+                  <div className="mt-2">
+                    <button className="rounded border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50">Update card</button>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 rounded-md border border-gray-100">
+                <div className="border-b border-gray-100 p-2 text-xs font-medium text-gray-900">Invoices</div>
+                <div className="divide-y divide-gray-100 text-xs">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <div className="text-gray-800">INV-0001 (mock) — $12.00 — 2025-08-01</div>
+                    <button className="rounded border border-gray-200 px-2 py-1 hover:bg-gray-50">Download</button>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <div className="text-gray-800">INV-0002 (mock) — $12.00 — 2025-09-01</div>
+                    <button className="rounded border border-gray-200 px-2 py-1 hover:bg-gray-50">Download</button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           {tab === 'hotkeys' && (
@@ -95,15 +123,7 @@ export default function SettingsPage() {
             </div>
           )}
           {tab === 'danger' && (
-            <div className="text-sm text-gray-800">
-              <div className="font-medium text-red-600">Danger zone</div>
-              <ul className="mt-2 list-disc pl-5 text-xs text-gray-700">
-                <li>Delete workspace (requires re-auth, 7–30 day grace)</li>
-                <li>Delete account (requires 2FA/passkey, export prompt)</li>
-                <li>Rotate workspace data key (advanced)</li>
-              </ul>
-              <p className="mt-2 text-xs text-gray-500">Actions disabled in this build. Coming soon.</p>
-            </div>
+            <DangerZone />
           )}
         </section>
       </div>
@@ -111,4 +131,43 @@ export default function SettingsPage() {
   );
 }
 
+function DangerZone() {
+  const [confirming, setConfirming] = React.useState<null | 'workspace' | 'account'>(null);
+  const [phrase, setPhrase] = React.useState('');
+  const required = confirming === 'workspace' ? 'delete workspace' : 'delete account';
+  const ok = phrase.trim().toLowerCase() === required;
+  return (
+    <div className="text-sm text-gray-800">
+      <div className="font-medium text-red-600">Danger zone</div>
+      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-md border border-gray-100 p-3">
+          <div className="text-xs font-medium text-gray-900">Delete workspace</div>
+          <p className="mt-1 text-xs text-gray-600">Requires re-auth. 7–30 day grace before permanent deletion.</p>
+          <button className="mt-2 rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50" onClick={() => { setPhrase(''); setConfirming('workspace'); }}>Delete workspace</button>
+        </div>
+        <div className="rounded-md border border-gray-100 p-3">
+          <div className="text-xs font-medium text-gray-900">Delete account</div>
+          <p className="mt-1 text-xs text-gray-600">Requires 2FA/passkey. You will be prompted to export data first.</p>
+          <button className="mt-2 rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50" onClick={() => { setPhrase(''); setConfirming('account'); }}>Delete account</button>
+        </div>
+      </div>
+      {confirming && (
+        <div role="dialog" aria-modal className="fixed inset-0 z-[120] grid place-items-start bg-black/10 p-4" onClick={() => setConfirming(null)}>
+          <div className="mx-auto w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-gray-100 p-3 text-sm font-semibold text-gray-900">Confirm {confirming === 'workspace' ? 'workspace deletion' : 'account deletion'}</div>
+            <div className="p-4 text-sm text-gray-800">
+              <p>Type “{required}” to confirm.</p>
+              <input value={phrase} onChange={(e) => setPhrase(e.target.value)} placeholder={required} className="mt-2 w-full rounded-md border border-gray-200 px-3 py-2 text-sm outline-none" />
+              <p className="mt-2 text-xs text-gray-600">This is a stub. Action is disabled in this build.</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-3 py-2 text-xs">
+              <button className="rounded border border-gray-200 bg-white px-2 py-1 hover:bg-gray-50" onClick={() => setConfirming(null)}>Cancel</button>
+              <button className="rounded border border-red-200 bg-red-600 px-2 py-1 text-white opacity-60" disabled={!ok}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
