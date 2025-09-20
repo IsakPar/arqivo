@@ -17,7 +17,7 @@ export default function Page() {
       </div>
     );
   }
-  const SignIn = dynamic(() => import('@clerk/nextjs').then(m => m.SignIn), { ssr: false });
+  const SignIn: any = dynamic(() => import('@clerk/nextjs').then(m => m.SignIn as any), { ssr: false });
   return (
     <div className="min-h-screen grid place-items-center p-6">
       <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/workspace" />

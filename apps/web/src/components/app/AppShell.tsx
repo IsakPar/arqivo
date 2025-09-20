@@ -5,6 +5,8 @@ import { useCommandPalette } from './CommandPalette';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
 import { Inbox } from './Inbox';
+import { SettingsModal } from './SettingsModal';
+import { useHotkeys } from '../../hooks/useHotkeys';
 import { searchIndex, indexFileName } from '../../lib/localdb';
 
 type Props = { children: React.ReactNode };
@@ -114,14 +116,13 @@ export function AppShell({ children }: Props) {
     e.currentTarget.value = '';
   }
 
-  React.useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); setInboxOpen(o => !o); }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') { e.preventDefault(); setSearchOpen(true); setSearchQuery(''); setSearchResults([]); }
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useHotkeys({
+    openInbox: () => setInboxOpen(o => !o),
+    openSearch: () => { setSearchOpen(true); setSearchQuery(''); setSearchResults([]); },
+    openSettings: () => setSettingsOpen(true),
+    openCommand: () => { setOpen(true); setQ(''); },
+    uploadFile: () => { const input = document.getElementById('ws-hidden-file') as HTMLInputElement | null; input?.click(); },
+  });
 
   // Cmd+F overlay
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -263,70 +264,16 @@ export function AppShell({ children }: Props) {
       </footer>
       <Modal />
       <Inbox open={inboxOpen} onClose={() => setInboxOpen(false)} onUnreadChange={(n) => setUnread(n)} />
-      {settingsOpen && (
-        <div role="dialog" aria-modal className="fixed inset-0 z-[110] grid place-items-start bg-black/10 p-4" onClick={() => setSettingsOpen(false)}>
-          <div className="mx-auto w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-gray-100 p-3 flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-900">Workspace Settings</div>
-              <div className="flex items-center gap-2">
-                <a href="/workspace/settings" className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs hover:bg-gray-50">Open full settings</a>
-                <button onClick={() => setSettingsOpen(false)} className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs hover:bg-gray-50">Close</button>
-              </div>
-            </div>
-            <div className="p-4 space-y-4 text-sm text-gray-800">
-              <div>
-                <div className="font-medium text-gray-900">Default view</div>
-                <div className="mt-1 text-xs text-gray-600">Choose how to browse your documents by default.</div>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => { try { localStorage.setItem('view','list'); } catch {} window.dispatchEvent(new CustomEvent('arqivo:view', { detail: 'list' })); }} className="rounded-md border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50">List</button>
-                  <button onClick={() => { try { localStorage.setItem('view','tree'); } catch {} window.dispatchEvent(new CustomEvent('arqivo:view', { detail: 'tree' })); }} className="rounded-md border border-gray-200 px-2 py-1 text-xs hover:bg-gray-50">Tree</button>
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-900">Appearance</div>
-                <div className="mt-1 text-xs text-gray-600">Theme preference for this device.</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <label className="inline-flex items-center gap-1 text-xs">
-                    <input type="radio" name="theme" checked={theme==='system'} onChange={() => setTheme('system')} /> System
-                  </label>
-                  <label className="inline-flex items-center gap-1 text-xs">
-                    <input type="radio" name="theme" checked={theme==='light'} onChange={() => setTheme('light')} /> Light
-                  </label>
-                  <label className="inline-flex items-center gap-1 text-xs">
-                    <input type="radio" name="theme" checked={theme==='dark'} onChange={() => setTheme('dark')} /> Dark
-                  </label>
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-900">Sidebar</div>
-                <div className="mt-1 text-xs text-gray-600">Show or hide the left sidebar by default.</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <input id="sbdef" type="checkbox" checked={sidebarOpen} onChange={(e) => setSidebarOpen(e.target.checked)} />
-                  <label htmlFor="sbdef">Sidebar open</label>
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-900">Notifications</div>
-                <div className="mt-1 text-xs text-gray-600">Email a daily digest of important items (e.g., upcoming warranties).</div>
-                <div className="mt-2 flex items-center gap-2">
-                  <input id="digest" type="checkbox" checked={digest} onChange={(e) => setDigest(e.target.checked)} />
-                  <label htmlFor="digest">Daily digest</label>
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-900">Hotkeys</div>
-                <div className="mt-1 text-xs text-gray-600">Quick actions available in this workspace.</div>
-                <ul className="mt-2 space-y-1 text-xs text-gray-700">
-                  <li><span className="font-medium text-gray-900">⌘K</span> — Command palette</li>
-                  <li><span className="font-medium text-gray-900">⌘F</span> — Local search overlay</li>
-                  <li><span className="font-medium text-gray-900">⌘U</span> — Upload file</li>
-                  <li><span className="font-medium text-gray-900">⌘,</span> — Open settings</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        theme={theme}
+        setTheme={setTheme}
+        digest={digest}
+        setDigest={setDigest}
+      />
     </div>
   );
 }
