@@ -8,6 +8,8 @@ import { Inbox } from './Inbox';
 import { SettingsModal } from './SettingsModal';
 import { useHotkeys } from '../../hooks/useHotkeys';
 import { searchIndex, indexFileName } from '../../lib/localdb';
+import { CmdFOverlay } from './CmdFOverlay';
+import { UploadTaskbar } from './UploadTaskbar';
 
 type Props = { children: React.ReactNode };
 
@@ -206,54 +208,15 @@ export function AppShell({ children }: Props) {
           )}
         </section>
       </div>
-      {/* Cmd+F Overlay */}
-      {searchOpen && (
-        <div role="dialog" aria-modal className="fixed inset-0 z-[100] grid place-items-start bg-black/10 p-4" onClick={() => setSearchOpen(false)}>
-          <div className="mx-auto w-full max-w-xl rounded-2xl border border-gray-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-gray-100 p-3">
-              <input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search local index…" className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none" />
-            </div>
-            <ul className="max-h-64 overflow-auto p-2">
-              {searchResults.length === 0 && <li className="px-2 py-3 text-sm text-gray-600">No results</li>}
-              {searchResults.map(r => (
-                <li key={r.id} className="px-3 py-2 text-sm hover:bg-gray-50">
-                  <div className="font-medium text-gray-900">{r.name || r.id}</div>
-                  {r.excerpt && <div className="text-xs text-gray-600">…{r.excerpt}…</div>}
-                </li>
-              ))}
-            </ul>
-            <div className="flex items-center justify-between border-t border-gray-100 px-3 py-2 text-xs text-gray-600">
-              <div>Local-only. Press Esc to close.</div>
-              <button onClick={() => setSearchOpen(false)} className="rounded-md border border-gray-200 bg-white px-2 py-1 hover:bg-gray-50">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CmdFOverlay open={searchOpen} query={searchQuery} results={searchResults} onClose={() => setSearchOpen(false)} onQueryChange={(v) => setSearchQuery(v)} />
       {/* Upload taskbar */}
-      {(uploading || tasks.length > 0) && (
-        <div className="fixed bottom-4 right-4 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
-          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
-            <div className="text-xs font-semibold text-gray-900">Uploads</div>
-            <div className="text-xs text-gray-600">{uploadDone}/{uploadTotal}</div>
-          </div>
-          <div className="max-h-64 space-y-2 overflow-auto p-3">
-            {tasks.map((t, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="truncate text-xs text-gray-800">{t.name}</div>
-                  {!t.done && (
-                    <button className="text-[11px] text-gray-600 hover:text-gray-900" onClick={() => { try { t.aborter.abort(); } catch {} setTasks(prev => prev.filter((_, idx) => idx !== i)); }}>Cancel</button>
-                  )}
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded bg-gray-100">
-                  <div className="h-1.5 bg-gray-900" style={{ width: `${Math.round(t.progress * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-            {tasks.length === 0 && <div className="text-xs text-gray-600">No tasks</div>}
-          </div>
-        </div>
-      )}
+      <UploadTaskbar
+        visible={uploading || tasks.length > 0}
+        tasks={tasks}
+        uploadDone={uploadDone}
+        uploadTotal={uploadTotal}
+        onCancel={(i) => { try { tasks[i]?.aborter.abort(); } catch {} setTasks(prev => prev.filter((_, idx) => idx !== i)); }}
+      />
       <footer className="flex items-center justify-between border-t border-gray-100 bg-white/80 px-4 py-2 text-xs text-gray-600">
         <div className="flex items-center gap-4">
           <a href="/status" className="hover:text-gray-900">Status</a>
