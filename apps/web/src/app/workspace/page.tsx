@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { deleteDocument, getBlob, listDocuments } from '../../lib/api';
+import dynamic from 'next/dynamic';
 import { aesGcmDecrypt, getOrCreateVaultKey } from '../../lib/crypto';
 import { useAuth } from '@clerk/nextjs';
 import { encryptAndUploadFile } from '../../lib/workspace';
@@ -112,35 +113,7 @@ export default function WorkspacePage() {
           <p className="mt-4 text-sm text-gray-600">No documents yet.</p>
         ) : view === 'tree' ? (
           <div className="mt-4 overflow-hidden rounded-lg border border-gray-100">
-            {/* Tree scaffold: group by Year -> Month */}
-            {Object.entries(
-              docs.reduce((acc: Record<string, Record<string, typeof docs>>, d) => {
-                const dt = new Date(d.createdAt);
-                const y = String(dt.getFullYear());
-                const m = String(dt.getMonth() + 1).padStart(2, '0');
-                acc[y] = acc[y] || {};
-                acc[y][m] = acc[y][m] || [];
-                acc[y][m].push(d);
-                return acc;
-              }, {})
-            ).map(([year, months]) => (
-              <div key={year} className="border-b border-gray-100">
-                <div className="bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-800">{year}</div>
-                {Object.entries(months).map(([month, rows]) => (
-                  <div key={month} className="px-3 py-2">
-                    <div className="text-xs text-gray-700">{year}-{month}</div>
-                    <ul className="mt-1 divide-y divide-gray-100 rounded-md border border-gray-100">
-                      {rows.map((d) => (
-                        <li key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                          <span className="truncate text-gray-900">{d.id}</span>
-                          <span className="text-gray-600">{(d.sizeBytes/1024).toFixed(1)} KB</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            ))}
+            {React.createElement(dynamic(() => import('../../components/app/LabelTree'), { ssr: false }))}
           </div>
         ) : (
           <div className="mt-4 overflow-hidden rounded-lg border border-gray-100" onKeyDown={(e) => {

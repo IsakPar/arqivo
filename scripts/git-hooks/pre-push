@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Warn when pushing directly to main/master without --force-with-lease on divergent history
+protected_branches=("main" "master")
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+for b in "${protected_branches[@]}"; do
+  if [[ "$current_branch" == "$b" ]]; then
+    # Check if local is ahead/behind
+    git fetch -q origin "$b" || true
+    ahead=$(git rev-list --count origin/$b..$b || echo 0)
+    behind=$(git rev-list --count $b..origin/$b || echo 0)
+    if [[ "$behind" -gt 0 ]]; then
+      echo "✖ Local $b is behind origin/$b ($behind commits). Push blocked." >&2
+      echo "  Run: git pull --rebase --autostash or push a feature branch instead." >&2
+      exit 1
+    fi
+  fi
+done
+
+exit 0
+
+

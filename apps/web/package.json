@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.9",
+    "pdfjs-dist": "^4.10.38",
+    "tesseract.js": "^5.1.0",
+    "@sentry/nextjs": "^8.50.0",
     "next": "15.5.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

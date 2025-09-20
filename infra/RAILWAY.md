@@ -1,3 +1,28 @@
+Deployment notes (staging):
+
+1) Services
+- API (Node 20) with env:
+  - DATABASE_URL
+  - AWS_S3_ENDPOINT / AWS_S3_FORCE_PATH_STYLE
+  - S3_BUCKET_US / S3_BUCKET_EU
+  - ACCOUNT_REGION_DEFAULT=us
+  - STRICT_AUTH=true (for staging)
+  - WEB_ORIGIN=https://staging.example.com
+  - SENTRY_DSN=(optional)
+- Postgres (Railway plugin)
+- MinIO/S3 (optional for staging)
+
+2) Build
+- pnpm install --frozen-lockfile
+- pnpm -r build
+  - services/api: node dist/migrate.js && node dist/index.js
+
+3) Health
+- GET /health returns ok
+
+4) Metrics
+- GET /metrics exposed for Prometheus (protect with IP allowlist in staging)
+
 ## Railway + Cloudflare R2 (Option A)
 
 This deploys the API on Railway (Docker) with a managed Postgres, and uses Cloudflare R2 (S3-compatible) for blob storage.

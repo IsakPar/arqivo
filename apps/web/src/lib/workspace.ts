@@ -1,6 +1,6 @@
 'use client';
 
-import { aesGcmEncrypt, sha256Hex, getOrCreateVaultKey, randomBytes } from './crypto';
+import { aesGcmEncrypt, sha256Hex, getOrCreateVaultKey, randomBytes, toHex } from './crypto';
 import { wrapFileKey } from './keystore';
 import { putBlob, putIndexShard, putMetadata, putWrappedFk } from './api';
 

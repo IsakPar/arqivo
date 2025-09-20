@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Abort rebasing protected branches
+protected_branches=("main" "master")
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+for b in "${protected_branches[@]}"; do
+  if [[ "$current_branch" == "$b" ]]; then
+    echo "✖ Rebase is blocked on protected branch '$b'. Create a feature branch instead." >&2
+    echo "  Example: git switch -c feature/your-change && git rebase origin/$b" >&2
+    exit 1
+  fi
+done
+
+exit 0
+
+

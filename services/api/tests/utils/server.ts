@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import getPort from 'get-port';
 import http from 'node:http';
 
@@ -9,11 +9,12 @@ export async function startServer(env: Record<string,string> = {}) {
   const port = await getPort();
   url = `http://127.0.0.1:${port}`;
   const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5433/arqivo';
-  // Run migrations against the target DB
-  spawn('node', ['dist/migrate.js'], {
+  // Run migrations against the target DB and wait to complete
+  const m = spawnSync('node', ['dist/migrate.js'], {
     env: { ...process.env, DATABASE_URL },
-    stdio: 'ignore',
+    stdio: 'inherit',
   });
+  if (m.status !== 0) throw new Error('migration failed');
   proc = spawn('node', ['dist/index.js'], {
     env: {
       ...process.env,
@@ -27,10 +28,10 @@ export async function startServer(env: Record<string,string> = {}) {
       DATABASE_URL,
       NODE_ENV: 'test',
     },
-    stdio: 'ignore',
+    stdio: 'inherit',
   });
   const start = Date.now();
-  while (Date.now() - start < 5000) {
+  while (Date.now() - start < 15000) {
     const ok = await new Promise<boolean>((resolve) => {
       const req = http.get(`${url}/health`, (res) => resolve(res.statusCode === 200));
       req.on('error', () => resolve(false));

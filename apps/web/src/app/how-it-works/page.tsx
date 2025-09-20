@@ -195,10 +195,81 @@ export default function HowItWorksPage() {
   return (
     <main className="min-h-screen bg-white">
       <SectionHeader />
-      <SystemAtAGlance />
+      <TaxonomyModel />
+      <TaxonomyClientSide />
       <ActTwo />
       <ActThree />
     </main>
+  );
+}
+
+function TaxonomyModel() {
+  return (
+    <section id="tree" className="bg-[#fafafb]">
+      <div className="mx-auto max-w-6xl px-6 py-16 lg:px-8">
+        <div className="rounded-3xl border border-white/50 bg-white/30 p-6 shadow-2xl ring-1 ring-white/30 backdrop-blur-2xl">
+          <h2 className="text-xl font-semibold text-gray-900">How the taxonomy works</h2>
+          <p className="mt-1 text-sm text-gray-700">A DAG (multi‑parent) with a closure table for fast ancestor/descendant queries, E2EE label names, and cached hot subtrees.</p>
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>Tables: <span className="font-medium">label</span>, <span className="font-medium">label_edge</span>, <span className="font-medium">label_closure</span>, <span className="font-medium">document_label</span>.</li>
+                <li>Integrity: sibling uniqueness, cycle guard, atomic stored procedures.</li>
+                <li>Queries: children, ancestors, descendants with keyset pagination.</li>
+                <li>Tenancy: PostgreSQL RLS via <code className="font-mono">app.account_id</code>.</li>
+                <li>Caching: Redis children/descendants lists; invalidate on writes.</li>
+              </ul>
+            </div>
+            <div>
+              <div className="relative h-56 rounded-2xl border border-gray-200 bg-white/70 p-3 shadow-sm">
+                <svg viewBox="0 0 500 200" className="h-full w-full">
+                  <g>
+                    <circle cx="80" cy="40" r="14" fill="#fff" stroke="#e5e7eb" />
+                    <text x="60" y="70" fontSize="10" fill="#0f172a">Workspace</text>
+                  </g>
+                  <g>
+                    <circle cx="200" cy="40" r="14" fill="#fff" stroke="#e5e7eb" />
+                    <text x="188" y="70" fontSize="10" fill="#0f172a">Clients</text>
+                  </g>
+                  <g>
+                    <circle cx="200" cy="120" r="14" fill="#fff" stroke="#e5e7eb" />
+                    <text x="186" y="150" fontSize="10" fill="#0f172a">Finances</text>
+                  </g>
+                  <path d="M94 40 C 130 40, 160 40, 186 40" stroke="#93a3b8" strokeWidth="1.5" fill="none" />
+                  <path d="M94 40 C 130 40, 160 120, 186 120" stroke="#93a3b8" strokeWidth="1.5" fill="none" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TaxonomyClientSide() {
+  return (
+    <section className="bg-white">
+      <div className="mx-auto max-w-6xl px-6 py-12 lg:px-8">
+        <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-900">Client‑side labels and naming engine</h3>
+          <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>E2EE label names: AES‑GCM on device; server stores ciphertext + <code className="font-mono">slug_token</code>.</li>
+                <li>Deterministic equality: NFKC → lowercase → HMAC‑SHA256 → base32.</li>
+                <li>Naming engine maps fields → labels: Who/What/When/Where/Why/How.</li>
+                <li>Attach/detach are idempotent; move = remove + add (atomic).</li>
+                <li>Explain‑why panel shows reasons and next actions.</li>
+              </ul>
+            </div>
+            <div>
+              <pre className="rounded-lg bg-gray-50 p-3 text-xs text-gray-800 overflow-auto"><code>{`// Equality without plaintext\nconst slug = base32(hmacSha256(k_label, canonicalName));\n\n// Create label (client)\nconst encName = aesGcmEncrypt(k_vault, name);\nPOST /v1/labels { name: encName, slugToken: slug }\n\n// Attach file\nPOST /v1/files/:fileId/labels { labelId }`}</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -260,7 +331,7 @@ function ActTwo() {
   }, [started, hoverPause, stage]);
 
   return (
-    <section id="magic-loop" ref={sectionRef} className="bg-white">
+    <section id="magic-loop" ref={sectionRef} className="bg-white scroll-mt-24">
       <div className="mx-auto max-w-6xl grid grid-cols-1 gap-10 px-6 py-20 sm:py-24 md:grid-cols-2 lg:px-8">
         {/* Left: expanded step rail (replaces chapter blocks) */}
         <div className="space-y-4">
@@ -387,7 +458,7 @@ function ActTwo() {
         </div>
       </div>
       <div className="mt-6 text-center">
-        <Link href="/docs/how-it-works" className="group inline-flex items-center text-sm font-medium text-gray-900 hover:underline underline-offset-4">View docs
+        <Link href="/how-it-works#overview" className="group inline-flex items-center text-sm font-medium text-gray-900 hover:underline underline-offset-4">View docs
           <svg aria-hidden viewBox="0 0 24 24" className="ml-1.5 h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
         </Link>
       </div>

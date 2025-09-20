@@ -6,6 +6,7 @@ import { Addendum } from "../components/Addendum";
 import { Pricing } from "../components/Pricing";
 import { CTA } from "../components/CTA";
 import { TalentForm } from "../components/TalentForm";
+import { LandingTreeShowcase } from "../components/LandingTreeShowcase";
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       <Usage />
       <Addendum />
       <AssistantNotify />
+      <LandingTreeShowcase />
       <Pricing />
       <CTA />
       <TalentForm />

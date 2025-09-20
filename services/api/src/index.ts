@@ -5,6 +5,7 @@ import { config as loadEnv } from 'dotenv';
 import { env } from './env.js';
 import cors from '@fastify/cors';
 import { authRoutes } from './routes/auth.js';
+import { registerIdempotency } from './middleware/idempotency.js';
 import { deviceRoutes } from './routes/devices.js';
 import { storageRoutes } from './routes/storage.js';
 import { metadataRoutes } from './routes/metadata.js';
@@ -12,12 +13,14 @@ import { indexRoutes } from './routes/indexShards.js';
 import { quotaRoutes } from './routes/quota.js';
 import { billingRoutes } from './routes/billing.js';
 import { documentRoutes } from './routes/documents.js';
+import { taxonomyRoutes } from './routes/taxonomy.js';
 import { authMiddleware } from './middleware/auth.js';
 import { incRequest, renderPrometheus, addUploadBytes, addRequestBytes, addResponseBytes, incStatus, observeLatency } from './metrics.js';
 import { sendError } from './error.js';
 import { query } from './db.js';
 import { randomUUID } from 'node:crypto';
 import { stripeWebhookRoute } from './routes/stripeWebhook.js';
+import * as Sentry from '@sentry/node';
 
 loadEnv();
 
@@ -28,6 +31,20 @@ async function start() {
     },
     bodyLimit: 100 * 1024 * 1024,
   });
+
+  try {
+    const dsn = process.env.SENTRY_DSN;
+    if (dsn) {
+      Sentry.init({ dsn, tracesSampleRate: 0.05 });
+      server.addHook('onError', async (req, _reply, err) => {
+        Sentry.withScope((scope) => {
+          scope.setTag('route', req.url);
+          scope.setUser({ id: (req as any).accountId || 'anon' });
+          Sentry.captureException(err);
+        });
+      });
+    }
+  } catch {}
 
   await server.register(helmet);
   await server.register(cors, {
@@ -145,11 +162,22 @@ tokens=tokens-1; redis.call('HMSET', key,'t',t,'tokens',tokens); redis.call('EXP
     done();
   });
 
+  // Ensure app.account_id is set after auth middleware populates req.accountId
+  server.addHook('preHandler', async (req, _reply) => {
+    const acct = (req as any).accountId as string | undefined;
+    if (acct) {
+      try { await query("select set_config('app.account_id', $1, true)", [acct]); } catch {}
+    }
+  });
+
   server.get('/health', async () => {
     return { ok: true, regionDefault: env.ACCOUNT_REGION_DEFAULT };
   });
 
   await authMiddleware(server);
+
+  // Idempotency handling for mutating requests
+  await registerIdempotency(server);
 
   await server.register(async (app) => authRoutes(app));
   await server.register(async (app) => deviceRoutes(app));
@@ -159,6 +187,7 @@ tokens=tokens-1; redis.call('HMSET', key,'t',t,'tokens',tokens); redis.call('EXP
   await server.register(async (app) => quotaRoutes(app));
   await server.register(async (app) => billingRoutes(app));
   await server.register(async (app) => documentRoutes(app));
+  await server.register(async (app) => taxonomyRoutes(app));
   await server.register(async (app) => stripeWebhookRoute(app));
 
   server.get('/metrics', async (_req, _reply) => {

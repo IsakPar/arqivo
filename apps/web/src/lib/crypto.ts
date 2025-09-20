@@ -70,6 +70,39 @@ export async function sha256Hex(input: Uint8Array): Promise<string> {
   return toHex(new Uint8Array(hash));
 }
 
+export async function sha256Bytes(input: Uint8Array): Promise<Uint8Array> {
+  const ab = toStrictArrayBuffer(input);
+  const hash = await crypto.subtle.digest('SHA-256', ab);
+  return new Uint8Array(hash);
+}
+
+export function canonicalizeLabel(input: string): string {
+  let s = input.normalize('NFKC').toLowerCase().trim();
+  s = s.replace(/\s+/g, ' ');
+  s = s.replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, '');
+  return s.replace(/ /g, '-');
+}
+
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+export function base32Encode(bytes: Uint8Array): string {
+  let bits = 0;
+  let value = 0;
+  let output = '';
+  for (let i = 0; i < bytes.length; i++) {
+    value = (value << 8) | bytes[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) {
+    output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  }
+  return output;
+}
+
+
 // Simple local vault key for v0 (replace with device-bound K_v later)
 const KV_STORAGE_KEY = 'arqivo_kv_hex';
 

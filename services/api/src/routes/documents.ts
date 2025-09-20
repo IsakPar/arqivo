@@ -1,25 +1,45 @@
 import type { FastifyInstance } from 'fastify';
 import { query } from '../db.js';
 import { StorageService } from '../storage.js';
+import { z } from 'zod';
 
 export async function documentRoutes(app: FastifyInstance) {
   const storage = new StorageService();
 
   app.get('/v1/documents', async (req) => {
     const accountId = req.accountId as string;
+    const schema = z.object({ labelId: z.string().uuid().optional(), descendants: z.coerce.boolean().default(true) });
+    const { labelId, descendants } = schema.parse((req as any).query || {});
+    if (labelId) {
+      if (descendants) {
+        const res = await query<{ doc_id: string; size_bytes: string; region_code: string; created_at: string }>(
+          `select d.doc_id, d.size_bytes, d.region_code, d.created_at
+           from documents d
+           join document_label dl on dl.account_id = d.account_id and dl.doc_id = d.doc_id
+           where d.account_id=$1 and dl.label_id in (
+             select descendant_id from label_closure where account_id=$1 and ancestor_id=$2
+           )
+           order by d.created_at desc`,
+          [accountId, labelId]
+        );
+        return { ok: true, documents: res.rows.map((r) => ({ id: r.doc_id, sizeBytes: Number(r.size_bytes), region: r.region_code, createdAt: r.created_at })) };
+      } else {
+        const res = await query<{ doc_id: string; size_bytes: string; region_code: string; created_at: string }>(
+          `select d.doc_id, d.size_bytes, d.region_code, d.created_at
+           from documents d
+           join document_label dl on dl.account_id = d.account_id and dl.doc_id = d.doc_id
+           where d.account_id=$1 and dl.label_id=$2
+           order by d.created_at desc`,
+          [accountId, labelId]
+        );
+        return { ok: true, documents: res.rows.map((r) => ({ id: r.doc_id, sizeBytes: Number(r.size_bytes), region: r.region_code, createdAt: r.created_at })) };
+      }
+    }
     const res = await query<{ doc_id: string; size_bytes: string; region_code: string; created_at: string }>(
       'select doc_id, size_bytes, region_code, created_at from documents where account_id=$1 order by created_at desc',
       [accountId]
     );
-    return {
-      ok: true,
-      documents: res.rows.map((r) => ({
-        id: r.doc_id,
-        sizeBytes: Number(r.size_bytes),
-        region: r.region_code,
-        createdAt: r.created_at,
-      })),
-    };
+    return { ok: true, documents: res.rows.map((r) => ({ id: r.doc_id, sizeBytes: Number(r.size_bytes), region: r.region_code, createdAt: r.created_at })) };
   });
 
   app.get<{ Params: { id: string } }>('/v1/documents/:id', async (req, reply) => {

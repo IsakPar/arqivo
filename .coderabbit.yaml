@@ -1,0 +1,61 @@
+# CodeRabbit configuration for PR reviews
+# Docs: https://docs.coderabbit.ai/config
+
+version: 1
+review:
+  enabled: true
+  auto_review:
+    enable_for_forks: false
+    # Trigger reviews on open/synchronize/reopen
+    events: [pull_request]
+  coverage:
+    min_changed_lines: 1
+  summary:
+    include_checklist: true
+    include_scores: true
+  rules:
+    - name: Type safety
+      description: Ensure strict TypeScript types, no any, correct nullability
+      severity: high
+    - name: Security
+      description: Validate auth, RLS, CSP, no secrets, no XSS/SQLi
+      severity: high
+    - name: Performance
+      description: Avoid N+1, large allocations, synchronous I/O on hot paths
+      severity: medium
+    - name: Reliability
+      description: Handle errors, avoid unhandled rejections, add tests if risky
+      severity: medium
+    - name: Maintainability
+      description: Small modules, clear names, no dead code
+      severity: low
+
+llm:
+  model: gpt-4o-mini
+  temperature: 0.2
+  max_tokens: 16000
+
+paths:
+  include:
+    - apps/**
+    - services/**
+    - packages/**
+  exclude:
+    - '**/*.md'
+    - '**/*.png'
+    - '**/*.jpg'
+    - '**/dist/**'
+    - '**/.next/**'
+
+annotations:
+  enable_inline: true
+  suggest_fixes: true
+
+checks:
+  changelog: false
+  commit_message: true
+  conventional_commits: false
+
+comments:
+  style: concise
+  limit: 100

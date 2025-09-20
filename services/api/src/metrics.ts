@@ -4,6 +4,10 @@ let totalRequestBytes = 0;
 let totalResponseBytes = 0;
 const routeCounters = new Map<string, number>();
 const statusCounters = new Map<number, number>();
+let taxonomyEdgesAdded = 0;
+let taxonomyEdgesRemoved = 0;
+let taxonomyCacheHit = 0;
+let taxonomyCacheMiss = 0;
 
 // Prometheus-style histogram buckets (seconds)
 const latencyBuckets = [
@@ -51,6 +55,11 @@ export function observeLatency(method: string, path: string, seconds: number) {
   }
 }
 
+export function incTaxEdgesAdded(n: number) { taxonomyEdgesAdded += n; }
+export function incTaxEdgesRemoved(n: number) { taxonomyEdgesRemoved += n; }
+export function incTaxCacheHit(n: number) { taxonomyCacheHit += n; }
+export function incTaxCacheMiss(n: number) { taxonomyCacheMiss += n; }
+
 export function renderPrometheus(): string {
   const lines: string[] = [];
   lines.push('# HELP arqivo_requests_total Total HTTP requests');
@@ -69,6 +78,18 @@ export function renderPrometheus(): string {
     const [method, path] = key.split(' ');
     lines.push(`arqivo_route_requests_total{method="${method}",path="${path}"} ${value}`);
   }
+  lines.push('# HELP arqivo_taxonomy_edges_added_total Taxonomy edges added');
+  lines.push('# TYPE arqivo_taxonomy_edges_added_total counter');
+  lines.push(`arqivo_taxonomy_edges_added_total ${taxonomyEdgesAdded}`);
+  lines.push('# HELP arqivo_taxonomy_edges_removed_total Taxonomy edges removed');
+  lines.push('# TYPE arqivo_taxonomy_edges_removed_total counter');
+  lines.push(`arqivo_taxonomy_edges_removed_total ${taxonomyEdgesRemoved}`);
+  lines.push('# HELP arqivo_taxonomy_cache_hits_total Taxonomy cache hits');
+  lines.push('# TYPE arqivo_taxonomy_cache_hits_total counter');
+  lines.push(`arqivo_taxonomy_cache_hits_total ${taxonomyCacheHit}`);
+  lines.push('# HELP arqivo_taxonomy_cache_misses_total Taxonomy cache misses');
+  lines.push('# TYPE arqivo_taxonomy_cache_misses_total counter');
+  lines.push(`arqivo_taxonomy_cache_misses_total ${taxonomyCacheMiss}`);
   lines.push('# HELP arqivo_status_code_total HTTP responses by status code');
   lines.push('# TYPE arqivo_status_code_total counter');
   for (const [code, value] of statusCounters.entries()) {
